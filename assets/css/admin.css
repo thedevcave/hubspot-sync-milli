@@ -1,0 +1,238 @@
+/**
+ * Admin CSS for HubSpot Sync - Milli
+ */
+
+/* Tab navigation */
+.nav-tab-wrapper {
+    border-bottom: 1px solid #ccd0d4;
+    margin-bottom: 20px;
+}
+
+.nav-tab {
+    position: relative;
+}
+
+.nav-tab:focus {
+    box-shadow: 0 0 0 1px #2271b1;
+}
+
+/* Tab content */
+.tab-content {
+    display: none;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Connection status */
+#connection-status {
+    margin-left: 10px;
+    font-weight: bold;
+    padding: 5px 10px;
+    border-radius: 3px;
+    display: inline-block;
+}
+
+#connection-status.success {
+    color: #00a32a;
+    background-color: #edfaef;
+    border: 1px solid #00a32a;
+}
+
+#connection-status.error {
+    color: #d63638;
+    background-color: #ffeaed;
+    border: 1px solid #d63638;
+}
+
+/* Test connection button */
+#test-connection {
+    position: relative;
+}
+
+#test-connection:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Form tables */
+.form-table th {
+    width: 200px;
+    vertical-align: top;
+    padding-top: 20px;
+}
+
+.form-table td {
+    vertical-align: top;
+    padding-top: 15px;
+}
+
+.form-table .description {
+    color: #646970;
+    font-style: italic;
+}
+
+/* Field mapping table */
+.widefat th {
+    width: 200px;
+    padding: 8px 10px;
+    font-weight: 600;
+}
+
+.widefat td {
+    padding: 8px 10px;
+}
+
+.widefat input[type="text"] {
+    width: 100%;
+    max-width: 400px;
+}
+
+/* Field validation */
+.field-warning {
+    color: #d63638 !important;
+    font-size: 12px !important;
+    display: block !important;
+    margin-top: 5px;
+}
+
+input[name^="hubspot_sync_milli_settings[contact_field_mapping]"].error {
+    border-color: #d63638 !important;
+}
+
+/* Settings sections */
+.tab-content h2 {
+    margin-top: 0;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 10px;
+}
+
+.tab-content h3 {
+    margin-top: 30px;
+    color: #23282d;
+}
+
+/* Checkboxes and radios */
+fieldset legend {
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+fieldset label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: normal;
+}
+
+fieldset input[type="checkbox"],
+fieldset input[type="radio"] {
+    margin-right: 8px;
+}
+
+/* Association IDs table */
+.widefat.association-table th {
+    width: 150px;
+    text-align: left;
+    font-weight: normal;
+}
+
+/* Responsive design */
+@media screen and (max-width: 782px) {
+    .form-table th,
+    .form-table td {
+        display: block;
+        width: 100%;
+        padding: 10px 0;
+    }
+    
+    .form-table th {
+        border-bottom: none;
+    }
+    
+    #connection-status {
+        display: block;
+        margin: 10px 0 0 0;
+        text-align: center;
+    }
+    
+    .nav-tab {
+        float: none;
+        display: block;
+        margin: 0 0 1px 0;
+    }
+}
+
+/* Loading states */
+.submitting {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+.loading::after {
+    content: "";
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    margin-left: 10px;
+    vertical-align: middle;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #0073aa;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Notices */
+.notice.hubspot-sync-notice {
+    border-left-color: #0073aa;
+}
+
+.notice.hubspot-sync-notice .notice-title {
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+/* Help text */
+.help-text {
+    background: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 15px;
+    margin: 20px 0;
+}
+
+.help-text h4 {
+    margin-top: 0;
+    color: #0073aa;
+}
+
+.help-text ul {
+    margin-bottom: 0;
+}
+
+/* Success highlights */
+.setting-saved {
+    background-color: #edfaef !important;
+    transition: background-color 0.3s ease;
+}
+
+/* Debug warning */
+.debug-warning {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 4px;
+    padding: 10px;
+    margin: 10px 0;
+    color: #856404;
+}

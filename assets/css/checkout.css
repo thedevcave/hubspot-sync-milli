@@ -1,0 +1,245 @@
+/**
+ * Checkout CSS for HubSpot Sync - Milli
+ */
+
+/* Main container */
+#hubspot_sync_milli_fields {
+    margin: 20px 0;
+    transition: opacity 0.3s ease;
+}
+
+#hubspot_sync_milli_fields.submitting {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+/* Section headings */
+#hubspot_sync_milli_fields h3 {
+    font-size: 18px;
+    margin: 20px 0 15px;
+    color: #333;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 8px;
+}
+
+#hubspot_sync_milli_fields h4 {
+    font-size: 16px;
+    margin: 15px 0 10px;
+    color: #2c3e50;
+}
+
+/* Form fields */
+#hubspot_sync_milli_fields .form-row {
+    margin-bottom: 20px;
+}
+
+#hubspot_sync_milli_fields label {
+    font-weight: 500;
+    color: #2c3e50;
+    margin-bottom: 8px;
+    display: block;
+}
+
+#hubspot_sync_milli_fields select,
+#hubspot_sync_milli_fields input[type="text"] {
+    font-size: 14px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 10px 12px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+#hubspot_sync_milli_fields select:focus,
+#hubspot_sync_milli_fields input[type="text"]:focus {
+    outline: none;
+    border-color: #0073aa;
+    box-shadow: 0 0 0 2px rgba(0, 115, 170, 0.2);
+}
+
+/* Conditional sections */
+#talked_to_provider_wrapper,
+#provider_referred_wrapper,
+#provider_details_section {
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+/* Provider details section styling */
+#provider_details_section {
+    background: #f9f9f9;
+    border: 1px solid #e1e1e1;
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 20px;
+    position: relative;
+}
+
+#provider_details_section::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #0073aa, #005a87);
+    border-radius: 8px 8px 0 0;
+}
+
+#provider_details_section h4 {
+    color: #0073aa;
+    margin-top: 0;
+}
+
+#provider_details_section p {
+    margin-bottom: 15px;
+    line-height: 1.5;
+}
+
+#provider_details_section em {
+    color: #666;
+    font-size: 0.9em;
+}
+
+/* Field validation */
+.incomplete-field {
+    border-color: #ffb900 !important;
+    background-color: #fffbf0 !important;
+}
+
+.incomplete-field:focus {
+    border-color: #ff8500 !important;
+    box-shadow: 0 0 0 2px rgba(255, 185, 0, 0.2) !important;
+}
+
+/* Error states */
+.field-error {
+    border-color: #d63638 !important;
+    background-color: #ffeaed !important;
+}
+
+.field-error:focus {
+    border-color: #d63638 !important;
+    box-shadow: 0 0 0 2px rgba(214, 54, 56, 0.2) !important;
+}
+
+/* Success states */
+.field-success {
+    border-color: #00a32a !important;
+    background-color: #edfaef !important;
+}
+
+.field-success:focus {
+    border-color: #00a32a !important;
+    box-shadow: 0 0 0 2px rgba(0, 163, 42, 0.2) !important;
+}
+
+/* Loading animation */
+#hubspot_sync_milli_fields.loading {
+    position: relative;
+}
+
+#hubspot_sync_milli_fields.loading::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 30px;
+    height: 30px;
+    margin: -15px 0 0 -15px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #0073aa;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    z-index: 1000;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Accessibility improvements */
+#hubspot_sync_milli_fields select:focus,
+#hubspot_sync_milli_fields input:focus {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    #provider_details_section {
+        border: 2px solid #000;
+        background: #fff;
+    }
+    
+    #hubspot_sync_milli_fields select,
+    #hubspot_sync_milli_fields input[type="text"] {
+        border: 2px solid #000;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    #talked_to_provider_wrapper,
+    #provider_referred_wrapper,
+    #provider_details_section {
+        transition: none;
+    }
+    
+    #hubspot_sync_milli_fields select,
+    #hubspot_sync_milli_fields input[type="text"] {
+        transition: none;
+    }
+    
+    .loading::after {
+        animation: none;
+        border: 3px solid #0073aa;
+    }
+}
+
+/* Mobile responsive */
+@media screen and (max-width: 768px) {
+    #provider_details_section {
+        padding: 15px;
+        margin-top: 15px;
+    }
+    
+    #hubspot_sync_milli_fields h3 {
+        font-size: 16px;
+    }
+    
+    #hubspot_sync_milli_fields h4 {
+        font-size: 15px;
+    }
+    
+    #hubspot_sync_milli_fields select,
+    #hubspot_sync_milli_fields input[type="text"] {
+        font-size: 16px; /* Prevents zoom on iOS */
+        padding: 12px;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    #provider_details_section {
+        background: #2c3e50;
+        border-color: #34495e;
+        color: #ecf0f1;
+    }
+    
+    #provider_details_section h4 {
+        color: #3498db;
+    }
+    
+    #provider_details_section p,
+    #provider_details_section em {
+        color: #bdc3c7;
+    }
+}
+
+/* Print styles */
+@media print {
+    #hubspot_sync_milli_fields {
+        display: none;
+    }
+}
