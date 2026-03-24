@@ -76,10 +76,13 @@ class HubSpot_Sync_Milli {
         
         // Device sync hook
         add_action( 'hubspot_sync_milli_add_serial_numbers', array( $this, 'update_hubspot_device_data' ) );
+        add_action( 'hubspot_sync_milli_process_serial_number', array( $this, 'process_single_serial_number' ), 10, 2 );
+        add_action( 'woocommerce_order_item_add_action', array( $this, 'on_order_item_added' ), 10, 3 );
         
         // Admin order actions
         add_filter( 'woocommerce_order_actions', array( $this, 'add_order_actions' ) );
         add_action( 'woocommerce_order_action_hubspot_sync_milli_sync', array( $this, 'manual_sync_order' ) );
+        add_action( 'woocommerce_order_action_hubspot_sync_milli_sync_devices', array( $this, 'manual_sync_devices' ) );
         
         // AJAX endpoints
         add_action( 'wp_ajax_hubspot_sync_milli_test_connection', array( $this, 'test_connection' ) );
@@ -99,6 +102,8 @@ class HubSpot_Sync_Milli {
         require_once HUBSPOT_SYNC_MILLI_PLUGIN_DIR . 'includes/class-hubspot-api.php';
         require_once HUBSPOT_SYNC_MILLI_PLUGIN_DIR . 'includes/class-checkout-fields.php';
         require_once HUBSPOT_SYNC_MILLI_PLUGIN_DIR . 'includes/class-sync-manager.php';
+        require_once HUBSPOT_SYNC_MILLI_PLUGIN_DIR . 'includes/class-serial-number-manager.php';
+        require_once HUBSPOT_SYNC_MILLI_PLUGIN_DIR . 'includes/class-abandoned-cart-tracker.php';
         
         // Load vendor autoloader if exists (for HubSpot SDK)
         $autoload_file = HUBSPOT_SYNC_MILLI_PLUGIN_DIR . 'vendor/autoload.php';
@@ -124,6 +129,11 @@ class HubSpot_Sync_Milli {
      * Initialize hooks
      */
     public function init_hooks() {
+        // Initialize abandoned cart tracker
+        if ( class_exists( 'HubSpot_Sync_Milli_Abandoned_Cart_Tracker' ) ) {
+            new HubSpot_Sync_Milli_Abandoned_Cart_Tracker();
+        }
+        
         // Add any additional hooks that need to run after init
     }
     
@@ -312,6 +322,7 @@ class HubSpot_Sync_Milli {
      */
     public function add_order_actions( $actions ) {
         $actions['hubspot_sync_milli_sync'] = __( 'Sync to HubSpot', 'hubspot-sync-milli' );
+        $actions['hubspot_sync_milli_sync_devices'] = __( 'Sync Devices to HubSpot', 'hubspot-sync-milli' );
         return $actions;
     }
     
@@ -332,6 +343,39 @@ class HubSpot_Sync_Milli {
             echo esc_html__( 'Order synced to HubSpot successfully.', 'hubspot-sync-milli' );
             echo '</p></div>';
         } );
+    }
+    
+    /**
+     * Manual sync devices for an order
+     */
+    public function manual_sync_devices( $order ) {
+        if ( ! $this->should_sync() ) {
+            return;
+        }
+        
+        $order_id = $order->get_id();
+        $this->log_debug( "Manual device sync triggered for order {$order_id}" );
+        
+        // Get sync manager and sync devices
+        $sync_manager = new HubSpot_Sync_Milli_Sync_Manager( $this->settings, $this->hubspot_client );
+        $result = $sync_manager->sync_order_devices( $order );
+        
+        // Add admin notice based on result
+        if ( $result && $result['success'] ) {
+            add_action( 'admin_notices', function() use ( $result ) {
+                echo '<div class="notice notice-success"><p>';
+                echo esc_html( sprintf( __( 'Devices synced successfully: %s', 'hubspot-sync-milli' ), $result['message'] ) );
+                echo '</p></div>';
+            } );
+            $this->log_debug( "Manual device sync completed successfully for order {$order_id}" );
+        } else {
+            add_action( 'admin_notices', function() use ( $result ) {
+                echo '<div class="notice notice-error"><p>';
+                echo esc_html( sprintf( __( 'Device sync failed: %s', 'hubspot-sync-milli' ), $result['message'] ?? 'Unknown error' ) );
+                echo '</p></div>';
+            } );
+            $this->log_error( "Manual device sync failed for order {$order_id}: " . ( $result['message'] ?? 'Unknown error' ) );
+        }
     }
     
     /**
@@ -530,6 +574,76 @@ class HubSpot_Sync_Milli {
     public function update_device_company_association( $order_id, $company_id ) {
         $sync_manager = new HubSpot_Sync_Milli_Sync_Manager( $this->settings, $this->hubspot_client );
         return $sync_manager->update_device_company_association( $order_id, $company_id );
+    }
+    
+    /**
+     * Process a single serial number for an order
+     * This hook allows external systems to add serial numbers to orders
+     */
+    public function process_single_serial_number( $order_id, $serial_number ) {
+        if ( ! $this->should_sync() ) {
+            return;
+        }
+        
+        $this->log_debug( "Processing single serial number {$serial_number} for order {$order_id}" );
+        
+        $sync_manager = new HubSpot_Sync_Milli_Sync_Manager( $this->settings, $this->hubspot_client );
+        
+        $result = $sync_manager->update_serial_number( $order_id, $serial_number );
+        
+        if ( $result ) {
+            $this->log_debug( "Successfully processed serial number {$serial_number} for order {$order_id}" );
+        } else {
+            $this->log_error( "Failed to process serial number {$serial_number} for order {$order_id}" );
+        }
+        
+        return $result;
+    }
+    
+    /**
+     * Handle when order items are added (hook for external systems)
+     */
+    public function on_order_item_added( $item_id, $item, $order_id ) {
+        // This hook can be used by external systems to trigger serial number processing
+        // when new items are added to orders
+        
+        $order = wc_get_order( $order_id );
+        if ( ! $order ) {
+            return;
+        }
+        
+        $product_name = $item->get_name();
+        
+        // Check if this is a Milli product that needs serial number processing
+        if ( stripos( $product_name, 'Milli Vaginal Dilator' ) !== false ) {
+            $this->log_debug( "Milli product added to order {$order_id}, item {$item_id}" );
+            
+            // Hook for external systems to add serial numbers
+            do_action( 'hubspot_sync_milli_milli_product_added', $order_id, $item_id, $product_name );
+        }
+    }
+    
+    /**
+     * Batch update serial numbers from external data
+     * This method can be called by external systems or cron jobs
+     */
+    public function batch_update_serial_numbers( $serial_numbers_data ) {
+        if ( ! $this->should_sync() ) {
+            return false;
+        }
+        
+        $this->log_debug( 'Starting batch serial number update' );
+        
+        $sync_manager = new HubSpot_Sync_Milli_Sync_Manager( $this->settings, $this->hubspot_client );
+        $result = $sync_manager->process_serial_numbers( $serial_numbers_data );
+        
+        if ( $result ) {
+            $this->log_debug( 'Batch serial number update completed successfully' );
+        } else {
+            $this->log_error( 'Batch serial number update failed' );
+        }
+        
+        return $result;
     }
     
     /**

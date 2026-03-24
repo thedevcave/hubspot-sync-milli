@@ -376,4 +376,204 @@ class HubSpot_Sync_Milli_HubSpot_API {
     public function get_client() {
         return $this->client;
     }
+    
+    /**
+     * Search for deals with flexible filtering
+     */
+    public function search_deals( $search_params ) {
+        if ( ! $this->client ) {
+            return array( 'success' => false, 'message' => 'No HubSpot client' );
+        }
+        
+        try {
+            $filter_groups = array();
+            
+            if ( isset( $search_params['filters'] ) ) {
+                $filters = array();
+                foreach ( $search_params['filters'] as $filter_data ) {
+                    $filter = new \HubSpot\Client\Crm\Deals\Model\Filter();
+                    $filter->setOperator( $filter_data['operator'] )
+                           ->setPropertyName( $filter_data['propertyName'] )
+                           ->setValue( $filter_data['value'] );
+                    $filters[] = $filter;
+                }
+                
+                $filter_group = new \HubSpot\Client\Crm\Deals\Model\FilterGroup();
+                $filter_group->setFilters( $filters );
+                $filter_groups[] = $filter_group;
+            }
+            
+            $search_request = new \HubSpot\Client\Crm\Deals\Model\PublicObjectSearchRequest();
+            $search_request->setFilterGroups( $filter_groups );
+            
+            if ( isset( $search_params['properties'] ) ) {
+                $search_request->setProperties( $search_params['properties'] );
+            }
+            
+            $results = $this->client->crm()->deals()->searchApi()->doSearch( $search_request );
+            $deals = $results->getResults();
+            
+            $formatted_deals = array();
+            foreach ( $deals as $deal ) {
+                $properties = $deal->getProperties();
+                $formatted_deals[] = array(
+                    'id' => $deal->getId(),
+                    'properties' => $properties
+                );
+            }
+            
+            return array( 
+                'success' => true, 
+                'deals' => $formatted_deals 
+            );
+            
+        } catch ( Exception $e ) {
+            error_log( 'HubSpot Search Deals Error: ' . $e->getMessage() );
+            return array( 
+                'success' => false, 
+                'message' => $e->getMessage() 
+            );
+        }
+    }
+    
+    /**
+     * Create or update contact
+     */
+    public function create_or_update_contact( $email, $contact_data ) {
+        if ( ! $this->client ) {
+            return array( 'success' => false, 'message' => 'No HubSpot client' );
+        }
+        
+        try {
+            // First, search for existing contact
+            $existing_contact = $this->search_contact( $email );
+            
+            if ( $existing_contact ) {
+                // Update existing contact
+                $result = $this->upsert_contact( $contact_data, $existing_contact->getId() );
+                return array( 
+                    'success' => true, 
+                    'contact_id' => $existing_contact->getId(),
+                    'is_update' => true
+                );
+            } else {
+                // Create new contact
+                $result = $this->upsert_contact( $contact_data );
+                if ( $result ) {
+                    return array( 
+                        'success' => true, 
+                        'contact_id' => $result->getId(),
+                        'is_update' => false
+                    );
+                }
+            }
+            
+            return array( 'success' => false, 'message' => 'Failed to create/update contact' );
+            
+        } catch ( Exception $e ) {
+            error_log( 'HubSpot Create/Update Contact Error: ' . $e->getMessage() );
+            return array( 
+                'success' => false, 
+                'message' => $e->getMessage() 
+            );
+        }
+    }
+    
+    /**
+     * Create deal
+     */
+    public function create_deal( $deal_data ) {
+        if ( ! $this->client ) {
+            return array( 'success' => false, 'message' => 'No HubSpot client' );
+        }
+        
+        try {
+            $result = $this->upsert_deal( $deal_data );
+            if ( $result ) {
+                return array( 
+                    'success' => true, 
+                    'deal_id' => $result->getId() 
+                );
+            }
+            
+            return array( 'success' => false, 'message' => 'Failed to create deal' );
+            
+        } catch ( Exception $e ) {
+            error_log( 'HubSpot Create Deal Error: ' . $e->getMessage() );
+            return array( 
+                'success' => false, 
+                'message' => $e->getMessage() 
+            );
+        }
+    }
+    
+    /**
+     * Update deal
+     */
+    public function update_deal( $deal_id, $deal_data ) {
+        if ( ! $this->client ) {
+            return array( 'success' => false, 'message' => 'No HubSpot client' );
+        }
+        
+        try {
+            $result = $this->upsert_deal( $deal_data, $deal_id );
+            return array( 'success' => true, 'deal_id' => $deal_id );
+            
+        } catch ( Exception $e ) {
+            error_log( 'HubSpot Update Deal Error: ' . $e->getMessage() );
+            return array( 
+                'success' => false, 
+                'message' => $e->getMessage() 
+            );
+        }
+    }
+    
+    /**
+     * Create association between objects
+     */
+    public function create_association( $from_object_type, $from_id, $to_object_type, $to_id, $association_type ) {
+        if ( ! $this->client ) {
+            return array( 'success' => false, 'message' => 'No HubSpot client' );
+        }
+        
+        try {
+            $association_spec = new \HubSpot\Client\Crm\Associations\V4\Model\AssociationSpec();
+            $association_spec->setAssociationCategory( \HubSpot\Client\Crm\Associations\V4\Model\AssociationSpec::ASSOCIATION_CATEGORY_HUBSPOT_DEFINED )
+                            ->setAssociationTypeId( $this->get_association_type_id( $association_type ) );
+                            
+            $batch_input = new \HubSpot\Client\Crm\Associations\V4\Model\BatchInputPublicAssociationMultiPost();
+            $batch_input->setFrom( array( 'id' => $from_id ) )
+                       ->setTo( array( 'id' => $to_id ) )
+                       ->setTypes( array( $association_spec ) );
+                       
+            $this->client->crm()->associations()->v4()->batchApi()->create( 
+                $from_object_type,
+                $to_object_type, 
+                array( $batch_input )
+            );
+            
+            return array( 'success' => true );
+            
+        } catch ( Exception $e ) {
+            error_log( 'HubSpot Create Association Error: ' . $e->getMessage() );
+            return array( 
+                'success' => false, 
+                'message' => $e->getMessage() 
+            );
+        }
+    }
+    
+    /**
+     * Get association type ID for common association types
+     */
+    private function get_association_type_id( $association_type ) {
+        $association_map = array(
+            'deal_to_contact' => 3,
+            'contact_to_deal' => 4,
+            'deal_to_company' => 5,
+            'company_to_deal' => 6
+        );
+        
+        return $association_map[ $association_type ] ?? 3;
+    }
 }
