@@ -15,7 +15,7 @@ A comprehensive WordPress plugin that provides complete WooCommerce-to-HubSpot i
 - **Deal Lifecycle**: Automated deal creation, updates, and stage transitions
 - **Device Integration**: Serial number tracking from fulfillment to HubSpot custom objects
 - **Background Processing**: Non-blocking async sync with cron job scheduling
-- **External API Ready**: REST endpoints for ShipHero, VeraCore and other fulfillment systems
+- **External API Ready**: REST endpoints for ShipHero and other fulfillment systems
 
 ### 📱 **Device & Serial Number Management**
 - **Order Item Tracking**: Serial numbers stored in WooCommerce order meta
@@ -107,7 +107,7 @@ graph LR
 **Complete serial number to HubSpot integration:**
 
 1. **Order Completion**: Customer places order
-2. **Fulfillment**: ShipHero, VeraCore (or external system) ships product
+2. **Fulfillment**: ShipHero (or external system) ships product
 3. **Serial Assignment**: Webhook or API call adds serial number to order
 4. **Automatic Detection**: Plugin monitors order meta updates (non-destructive)
 5. **Device Creation**: HubSpot device object created automatically
@@ -172,10 +172,10 @@ The plugin automatically monitors existing ShipHero webhook processing:
 add_action('updated_post_meta', 'on_order_meta_updated', 10, 4);
 ```
 
-#### VeraCore Integration (Manual)
+#### External Webhook Integration (Manual)
 ```php
 // External systems can trigger serial number assignment
-add_action('wp_ajax_nopriv_veracore_webhook', function() {
+add_action('wp_ajax_nopriv_external_webhook', function() {
     $data = json_decode(file_get_contents('php://input'), true);
     
     foreach ($data as $shipment) {

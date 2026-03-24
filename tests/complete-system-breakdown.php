@@ -348,7 +348,7 @@ class HubSpot_Sync_Test_Breakdown {
         echo "\n✓ DEVICE: Check for serial numbers\n";
         echo "  └─ Function: sync_order_devices()\n";
         echo "  └─ Meta: order.get_meta('serial_numbers')\n";
-        echo "  └─ Result: No devices yet (pending VeraCore)\n";
+        echo "  └─ Result: No devices yet (pending external fulfillment)\n";
         
         return "SYNC COMPLETE: Order fully synced to HubSpot";
     }
@@ -358,7 +358,7 @@ class HubSpot_Sync_Test_Breakdown {
      * ============================================
      * 
      * TRIGGERS:
-     * - External system (VeraCore) webhook/API call
+     * - External fulfillment system webhook/API call
      * - Serial number assignment to order
      * - Device creation in HubSpot
      */
@@ -368,8 +368,8 @@ class HubSpot_Sync_Test_Breakdown {
         $order_id = 12345;
         $serial_number = 'SN123456789';
         
-        // 1. External System Trigger (VeraCore)
-        echo "✓ EXTERNAL: VeraCore assigns serial number\n";
+        // 1. External System Trigger (External Fulfillment)
+        echo "✓ EXTERNAL: Fulfillment system assigns serial number\n";
         echo "  └─ Method: REST API call or AJAX webhook\n";
         echo "  └─ Endpoint: /wp-json/hubspot-sync-milli/v1/serial-number\n";
         echo "  └─ Data: order_id={$order_id}, serial_number={$serial_number}\n";
@@ -496,7 +496,7 @@ class HubSpot_Sync_Test_Breakdown {
         echo "  📧 HubSpot CRM: Contacts, Deals, Custom Objects\n";
         echo "  🛒 WooCommerce: Orders, Meta, Statuses, Hooks\n";
         echo "  🌐 WordPress: Sessions, Cron, AJAX, REST API\n";
-        echo "  📦 VeraCore: Serial number webhooks/API\n";
+        echo "  📦 External fulfillment: Serial number webhooks/API\n";
         echo "  💻 Frontend: jQuery event handling, AJAX calls\n";
         echo "  ⚙️ Admin: Settings, manual triggers, monitoring\n";
         

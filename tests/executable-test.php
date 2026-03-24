@@ -237,7 +237,7 @@ function test_stage_7_background_sync($order_id) {
     
     echo "\n📱 Device processing preparation:\n";
     echo "  🔍 Check serial numbers: None yet\n";
-    echo "  ⏳ Status: Awaiting VeraCore assignment\n";
+    echo "  ⏳ Status: Awaiting fulfillment assignment\n";
     echo "  🎯 Ready: For future device sync\n";
     
     echo "\n📈 Sync completion:\n";
@@ -248,7 +248,7 @@ function test_stage_7_background_sync($order_id) {
 
 function test_stage_8_device_assignment($order_id, $serial_number) {
     echo "📡 External system integration:\n";
-    echo "  🏭 VeraCore: Device shipped\n";
+    echo "  🏭 External fulfillment: Device shipped\n";
     echo "  📱 Serial number: {$serial_number}\n";
     echo "  🔗 API call: POST /wp-json/hubspot-sync-milli/v1/serial-number\n";
     

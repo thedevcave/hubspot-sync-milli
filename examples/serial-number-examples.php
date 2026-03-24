@@ -2,7 +2,7 @@
 /**
  * Example: How to add serial numbers to WooCommerce orders
  * 
- * This example shows how external systems (like VeraCore) can
+ * This example shows how external systems can
  * programmatically add serial numbers to WooCommerce orders.
  * 
  * @package HubSpot_Sync_Milli
@@ -35,10 +35,10 @@ function example_add_single_serial_number() {
 }
 
 /**
- * Example 2: Process serial numbers from a CSV export (like VeraCore)
+ * Example 2: Process serial numbers from a CSV export from external fulfillment systems
  */
-function example_process_veracore_export() {
-    // Example CSV data from VeraCore
+function example_process_external_export() {
+    // Example CSV data from external fulfillment system
     $csv_data = array(
         array(
             'Order ID' => '12345',
@@ -69,8 +69,8 @@ function example_process_veracore_export() {
  * Example 3: Use in a WordPress action/hook
  */
 function example_process_serial_numbers_on_webhook() {
-    // This could be triggered by a webhook from VeraCore
-    add_action( 'wp_ajax_nopriv_veracore_serial_update', function() {
+    // This could be triggered by a webhook from external fulfillment system
+    add_action( 'wp_ajax_nopriv_external_serial_update', function() {
         // Get POST data
         $order_id = $_POST['order_id'] ?? '';
         $serial_number = $_POST['serial_number'] ?? '';

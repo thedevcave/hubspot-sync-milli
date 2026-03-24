@@ -148,7 +148,7 @@ $(document.body).on('updated_checkout', function() {
 
 ### **External Integration Endpoints**
 ```php
-// Serial number assignment (for VeraCore/external systems)
+// Serial number assignment (for external systems)
 register_rest_route('hubspot-sync-milli/v1', '/serial-number', [
     'methods' => 'POST',
     'callback' => 'handle_serial_number_assignment',
@@ -213,7 +213,7 @@ TIME    EVENT                           HOOK/TRIGGER                         ACT
 5:00    Payment completes              woocommerce_payment_complete         Convert cart→order
 5:00    Background sync scheduled      wp_schedule_single_event             60s delay
 6:00    Background sync runs           hubspot_sync_milli_cron              Update HubSpot
-24hrs   VeraCore ships product         REST API call                        Add serial number
+24hrs   External system ships product   REST API call                        Add serial number
 24hrs   ShipHero ships product         api-shiphero.php webhook             Auto-detect serial
 24hrs   Device synced                  hubspot_sync_milli_process_serial    HubSpot device
 ```

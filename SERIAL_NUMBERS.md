@@ -33,7 +33,7 @@ if ($success) {
 ### Batch Processing from CSV Data
 
 ```php
-// Example: Process VeraCore CSV export
+// Example: Process external fulfillment CSV export
 $csv_data = array(
     array(
         'Order ID' => '12345',
@@ -208,13 +208,13 @@ Use the provided test file: `wp-content/plugins/hubspot-sync-milli/test-shiphero
 [HubSpot Sync - Milli] DEBUG: Successfully processed serial number SN123456
 ```
 
-## VeraCore Integration Example
+## External Webhook Integration
 
-For VeraCore or similar fulfillment systems:
+For external fulfillment systems:
 
 ```php
-// Process VeraCore webhook
-add_action('wp_ajax_nopriv_veracore_webhook', function() {
+// Process external fulfillment webhook
+add_action('wp_ajax_nopriv_external_webhook', function() {
     $data = json_decode(file_get_contents('php://input'), true);
     
     foreach ($data as $shipment) {
