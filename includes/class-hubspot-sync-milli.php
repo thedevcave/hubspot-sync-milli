@@ -289,7 +289,7 @@ class HubSpot_Sync_Milli {
             return;
         }
         
-        $sync_statuses = $this->settings['sync_on_status_change'] ?? array( 'processing', 'completed' );
+        $sync_statuses = $this->settings['sync_on_status_change'] ?? array( 'processing', 'completed', 'pending-payment', 'on-hold' );
         
         if ( in_array( $new_status, $sync_statuses, true ) ) {
             $this->schedule_sync( $order_id, 'status_change' );

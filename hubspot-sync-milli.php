@@ -107,7 +107,7 @@ function hubspot_sync_milli_activate() {
                 'company_to_device' => ''
             ),
             'serial_numbers_folder_id' => '',
-            'sync_on_status_change' => array( 'processing', 'completed' ),
+            'sync_on_status_change' => array( 'processing', 'completed', 'pending-payment', 'on-hold' ),
             'debug_logging' => false
         );
         

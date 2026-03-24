@@ -76,6 +76,8 @@ Create a HubSpot Private App with these scopes:
 | Order Status | HubSpot Stage | Purpose |
 |--------------|---------------|---------|
 | **Abandoned Cart** | `abandoned_cart` | Real-time cart tracking |
+| **Pending Payment** | `pending_payment` | Payment gateways like AfterPay |
+| **On Hold** | `on_hold` | Orders awaiting payment processing |
 | **Processing** | `processing` | Orders being fulfilled |
 | **Completed** | `won` | Successfully completed orders |
 | **Cancelled** | `cancelled` | Customer cancellations |

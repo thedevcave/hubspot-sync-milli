@@ -571,7 +571,7 @@ class HubSpot_Sync_Milli_Admin_Settings {
                                     <legend class="screen-reader-text"><?php esc_html_e( 'Order statuses that trigger sync', 'hubspot-sync-milli' ); ?></legend>
                                     <?php
                                     $wc_statuses = wc_get_order_statuses();
-                                    $sync_statuses = $this->settings['sync_on_status_change'] ?? array( 'processing', 'completed' );
+                                    $sync_statuses = $this->settings['sync_on_status_change'] ?? array( 'processing', 'completed', 'pending-payment', 'on-hold' );
                                     
                                     foreach ( $wc_statuses as $status_key => $status_label ) {
                                         $status_key = str_replace( 'wc-', '', $status_key );
