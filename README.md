@@ -172,7 +172,8 @@ The plugin automatically monitors existing ShipHero webhook processing:
 add_action('updated_post_meta', 'on_order_meta_updated', 10, 4);
 ```
 
-#### VeraCore Integration (Manual)```php
+#### VeraCore Integration (Manual)
+```php
 // External systems can trigger serial number assignment
 add_action('wp_ajax_nopriv_veracore_webhook', function() {
     $data = json_decode(file_get_contents('php://input'), true);
