@@ -72,6 +72,14 @@ add_action('woocommerce_order_status_changed', array($this, 'handle_order_status
   ↳ Priority: 10
   ↳ File: class-hubspot-sync-milli.php:76
   ↳ Trigger: Any status change (pending → processing → completed, etc.)
+
+// Monitor order meta updates for ShipHero integration
+add_action('updated_post_meta', array($this, 'on_order_meta_updated'), 10, 4);
+  ↳ Priority: 10
+  ↳ File: class-hubspot-sync-milli.php:80
+  ↳ Purpose: Detect ShipHero serial number additions (non-destructive)
+  ↳ Meta Key: 'serial_numbers' on 'shop_order' posts
+  ↳ Trigger: Automatic device creation when ShipHero processes fulfillment
 ```
 
 ### **Background Processing Hooks** (async operations)
@@ -159,6 +167,36 @@ POST /wp-json/hubspot-sync-milli/v1/serial-number
 }
 ```
 
+### **ShipHero Integration (Automatic Monitoring)**
+Unlike REST API endpoints, ShipHero integration uses WordPress post meta monitoring:
+
+```php
+// Automatic detection of existing ShipHero workflow
+add_action('updated_post_meta', array($this, 'on_order_meta_updated'), 10, 4);
+
+// Integration flow:
+// 1. ShipHero webhook → api-shiphero.php (existing, unchanged)
+// 2. $order->update_meta_data('serial_numbers', $serial) (existing)  
+// 3. WordPress updated_post_meta action fires (automatic)
+// 4. Plugin detects serial_numbers meta change (new monitoring)
+// 5. do_action('hubspot_sync_milli_process_serial_number') (existing system)
+
+public function on_order_meta_updated($meta_id, $post_id, $meta_key, $meta_value) {
+    if ($meta_key === 'serial_numbers' && get_post_type($post_id) === 'shop_order') {
+        // Parse comma-separated serials and trigger device creation
+        foreach (explode(',', $meta_value) as $serial_number) {
+            do_action('hubspot_sync_milli_process_serial_number', $post_id, trim($serial_number));
+        }
+    }
+}
+```
+
+**Benefits:**
+- ✅ Non-destructive integration (no changes to working ShipHero code)
+- ✅ Automatic detection of any serial number source
+- ✅ Uses existing HubSpot device creation infrastructure
+- ✅ WordPress native hook system for reliability
+
 ## Data Flow Sequence
 
 ### **Complete Customer Journey Timeline**
@@ -176,6 +214,7 @@ TIME    EVENT                           HOOK/TRIGGER                         ACT
 5:00    Background sync scheduled      wp_schedule_single_event             60s delay
 6:00    Background sync runs           hubspot_sync_milli_cron              Update HubSpot
 24hrs   VeraCore ships product         REST API call                        Add serial number
+24hrs   ShipHero ships product         api-shiphero.php webhook             Auto-detect serial
 24hrs   Device synced                  hubspot_sync_milli_process_serial    HubSpot device
 ```
 

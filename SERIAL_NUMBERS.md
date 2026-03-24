@@ -148,6 +148,66 @@ add_action('hubspot_sync_milli_process_serial_number', function($order_id, $seri
 });
 ```
 
+## ShipHero Integration (Automatic)
+
+### Overview
+
+The plugin automatically monitors existing ShipHero webhook processing without requiring any modifications to your existing code. This provides seamless integration with your current fulfillment workflow.
+
+### How It Works
+
+1. **Existing Process**: ShipHero webhook calls `api-shiphero.php` (unchanged)
+2. **Serial Number Storage**: Your existing code updates order meta: `$order->update_meta_data('serial_numbers', $serial_number)`
+3. **Automatic Detection**: Plugin hooks into WordPress meta updates to detect new serial numbers
+4. **HubSpot Device Creation**: Automatically triggered using existing plugin infrastructure
+
+### WordPress Hook Implementation
+
+```php
+// Plugin automatically monitors for serial number meta updates
+add_action('updated_post_meta', array($this, 'on_order_meta_updated'), 10, 4);
+
+public function on_order_meta_updated($meta_id, $post_id, $meta_key, $meta_value) {
+    // Only process serial_numbers meta for shop_order posts
+    if ($meta_key !== 'serial_numbers' || get_post_type($post_id) !== 'shop_order') {
+        return;
+    }
+    
+    // Parse and process each serial number
+    $serial_numbers = array_filter(array_map('trim', explode(',', $meta_value)));
+    
+    foreach ($serial_numbers as $serial_number) {
+        if (!empty($serial_number) && $serial_number !== 'N/A') {
+            // Trigger existing device creation system
+            do_action('hubspot_sync_milli_process_serial_number', $post_id, $serial_number);
+        }
+    }
+}
+```
+
+### Benefits of This Approach
+
+- ✅ **Zero Code Changes**: Your existing ShipHero integration continues working unchanged
+- ✅ **Non-Destructive**: No modifications to working webhook code
+- ✅ **Automatic Detection**: Monitors all serial number additions regardless of source
+- ✅ **Reliable Integration**: Uses WordPress's built-in hook system
+- ✅ **Debug Logging**: Full visibility into device creation process
+
+### Testing ShipHero Integration
+
+Use the provided test file: `wp-content/plugins/hubspot-sync-milli/test-shiphero-integration.php`
+
+1. Navigate to the test file in your browser
+2. Select a recent WooCommerce order
+3. Click the test link to simulate serial number addition
+4. Check error logs for debug messages:
+
+```
+[HubSpot Sync - Milli] DEBUG: ShipHero serial number update detected for order 12345: SN123456
+[HubSpot Sync - Milli] DEBUG: Triggering HubSpot device creation for serial: SN123456
+[HubSpot Sync - Milli] DEBUG: Successfully processed serial number SN123456
+```
+
 ## VeraCore Integration Example
 
 For VeraCore or similar fulfillment systems:

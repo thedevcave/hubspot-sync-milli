@@ -79,6 +79,9 @@ class HubSpot_Sync_Milli {
         add_action( 'hubspot_sync_milli_process_serial_number', array( $this, 'process_single_serial_number' ), 10, 2 );
         add_action( 'woocommerce_order_item_add_action', array( $this, 'on_order_item_added' ), 10, 3 );
         
+        // Monitor ShipHero serial number updates
+        add_action( 'updated_post_meta', array( $this, 'on_order_meta_updated' ), 10, 4 );
+        
         // Admin order actions
         add_filter( 'woocommerce_order_actions', array( $this, 'add_order_actions' ) );
         add_action( 'woocommerce_order_action_hubspot_sync_milli_sync', array( $this, 'manual_sync_order' ) );
@@ -620,6 +623,56 @@ class HubSpot_Sync_Milli {
             
             // Hook for external systems to add serial numbers
             do_action( 'hubspot_sync_milli_milli_product_added', $order_id, $item_id, $product_name );
+        }
+    }
+    
+    /**
+     * Monitor order meta updates to detect ShipHero serial number additions
+     * 
+     * @param int $meta_id The meta ID
+     * @param int $post_id The post ID (order ID)
+     * @param string $meta_key The meta key
+     * @param mixed $meta_value The meta value
+     */
+    public function on_order_meta_updated( $meta_id, $post_id, $meta_key, $meta_value ) {
+        // Only process serial_numbers meta for shop_order posts
+        if ( $meta_key !== 'serial_numbers' || get_post_type( $post_id ) !== 'shop_order' ) {
+            return;
+        }
+        
+        // Validate order exists
+        $order = wc_get_order( $post_id );
+        if ( ! $order ) {
+            return;
+        }
+        
+        // Skip if HubSpot sync is disabled
+        if ( ! $this->should_sync() ) {
+            $this->log_debug( "ShipHero serial number detected for order {$post_id} but HubSpot sync is disabled" );
+            return;
+        }
+        
+        $this->log_debug( "ShipHero serial number update detected for order {$post_id}: {$meta_value}" );
+        
+        // Parse serial numbers (could be comma-separated)
+        $serial_numbers = array_filter( array_map( 'trim', explode( ',', $meta_value ) ) );
+        
+        foreach ( $serial_numbers as $serial_number ) {
+            if ( empty( $serial_number ) || $serial_number === 'N/A' ) {
+                continue;
+            }
+            
+            // Check if this serial number was already processed
+            $existing_devices = get_post_meta( $post_id, '_hubspot_device_ids', true );
+            if ( is_array( $existing_devices ) && in_array( $serial_number, array_keys( $existing_devices ) ) ) {
+                $this->log_debug( "Serial number {$serial_number} already processed for order {$post_id}" );
+                continue;
+            }
+            
+            $this->log_debug( "Triggering HubSpot device creation for serial: {$serial_number} from order {$post_id}" );
+            
+            // Trigger the existing device creation system
+            do_action( 'hubspot_sync_milli_process_serial_number', $post_id, $serial_number );
         }
     }
     

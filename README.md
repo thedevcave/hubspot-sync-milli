@@ -15,12 +15,13 @@ A comprehensive WordPress plugin that provides complete WooCommerce-to-HubSpot i
 - **Deal Lifecycle**: Automated deal creation, updates, and stage transitions
 - **Device Integration**: Serial number tracking from fulfillment to HubSpot custom objects
 - **Background Processing**: Non-blocking async sync with cron job scheduling
-- **External API Ready**: REST endpoints for VeraCore and other fulfillment systems
+- **External API Ready**: REST endpoints for ShipHero, VeraCore and other fulfillment systems
 
 ### 📱 **Device & Serial Number Management**
 - **Order Item Tracking**: Serial numbers stored in WooCommerce order meta
 - **HubSpot Device Objects**: Automatic device creation with full property mapping
 - **Association Management**: Links devices to contacts, deals, and companies
+- **ShipHero Integration**: Automatic monitoring of existing ShipHero webhooks for serial numbers
 - **Batch Processing**: Handle multiple serial number assignments efficiently
 - **Manual Sync Options**: Admin controls for immediate device synchronization
 
@@ -106,10 +107,11 @@ graph LR
 **Complete serial number to HubSpot integration:**
 
 1. **Order Completion**: Customer places order
-2. **Fulfillment**: VeraCore (or external system) ships product
-3. **Serial Assignment**: API call adds serial number to order
-4. **Device Creation**: HubSpot device object created automatically
-5. **Association**: Device linked to contact, deal, and company
+2. **Fulfillment**: ShipHero, VeraCore (or external system) ships product
+3. **Serial Assignment**: Webhook or API call adds serial number to order
+4. **Automatic Detection**: Plugin monitors order meta updates (non-destructive)
+5. **Device Creation**: HubSpot device object created automatically
+6. **Association**: Device linked to contact, deal, and company
 
 ## 📊 Field Mapping
 
@@ -157,8 +159,20 @@ action=hubspot_sync_milli_test_connection
 &nonce={admin_nonce}
 ```
 
-### Webhook Integration (VeraCore Example)
+### Webhook Integration
+#### ShipHero Integration (Automatic)
+The plugin automatically monitors existing ShipHero webhook processing:
 ```php
+// No code changes needed - plugin hooks into existing ShipHero workflow:
+// 1. ShipHero webhook → api-shiphero.php (existing)
+// 2. Serial numbers saved to order meta (existing) 
+// 3. Plugin detects meta update → triggers HubSpot device creation (new)
+
+// Monitoring is added via WordPress hooks:
+add_action('updated_post_meta', 'on_order_meta_updated', 10, 4);
+```
+
+#### VeraCore Integration (Manual)```php
 // External systems can trigger serial number assignment
 add_action('wp_ajax_nopriv_veracore_webhook', function() {
     $data = json_decode(file_get_contents('php://input'), true);
@@ -240,6 +254,7 @@ Enable in **Settings → HubSpot Sync → Advanced**:
 - [ ] **Cart Return**: Modify form, confirm same deal updated  
 - [ ] **Order Completion**: Complete purchase, verify deal conversion
 - [ ] **Device Assignment**: Add serial number, confirm HubSpot device creation
+- [ ] **ShipHero Integration**: Test with existing api-shiphero.php webhook
 - [ ] **Admin Interface**: Test connection, manual sync, bulk actions
 
 ## ⚙️ Advanced Usage
@@ -382,6 +397,8 @@ For enterprise implementation, custom development, or technical support:
 - ✨ **New**: Advanced abandoned cart tracking with conversion prevention
 - ✨ **New**: Device and serial number management system
 - ✨ **New**: External system integration via REST API
+- ✨ **New**: ShipHero webhook monitoring with automatic device creation
+- ✨ **New**: Non-destructive integration hooks for existing systems
 - ✨ **New**: Comprehensive testing framework
 - ✨ **New**: Background sync processing 
 - 🔧 **Enhanced**: Modern admin interface with real-time connection testing
