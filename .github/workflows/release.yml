@@ -1,0 +1,86 @@
+name: Create Release Package
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          
+      - name: Install Composer dependencies
+        run: |
+          composer install --no-dev --optimize-autoloader
+          
+      - name: Create plugin archive
+        run: |
+          # Create archive using git to respect .gitattributes
+          # The --prefix ensures folder is always "hubspot-sync-milli/" regardless of version
+          git archive --format=zip --prefix=hubspot-sync-milli/ HEAD -o hubspot-sync-milli.zip
+          
+          # Extract to temporary directory to add vendor files
+          mkdir temp-plugin
+          unzip hubspot-sync-milli.zip -d temp-plugin
+          
+          # Verify the folder structure is correct for WordPress
+          if [ ! -d "temp-plugin/hubspot-sync-milli" ]; then
+            echo "ERROR: Expected folder 'hubspot-sync-milli' not found!"
+            echo "Contents of temp-plugin directory:"
+            ls -la temp-plugin/
+            exit 1
+          fi
+          
+          # Copy vendor directory (since it's not in git but needed for plugin)
+          cp -r vendor temp-plugin/hubspot-sync-milli/
+          
+          # Verify main plugin file exists
+          if [ ! -f "temp-plugin/hubspot-sync-milli/hubspot-sync-milli.php" ]; then
+            echo "ERROR: Main plugin file not found!"
+            exit 1
+          fi
+          
+          # Remove the original zip
+          rm hubspot-sync-milli.zip
+          
+          # Create final zip from temp directory ensuring exact folder name
+          cd temp-plugin
+          zip -r ../hubspot-sync-milli.zip hubspot-sync-milli/
+          cd ..
+          
+          # Cleanup temp directory
+          rm -rf temp-plugin
+          
+      - name: Verify plugin structure
+        run: |
+          echo "=== Plugin Archive Contents ==="
+          unzip -l hubspot-sync-milli.zip | head -20
+          echo ""
+          echo "=== Verifying WordPress-compatible structure ==="
+          # Check that all files are under hubspot-sync-milli/ folder
+          if unzip -l hubspot-sync-milli.zip | grep -v "hubspot-sync-milli/" | grep -E "\.php$|\.css$|\.js$"; then
+            echo "ERROR: Found files outside of hubspot-sync-milli/ folder!"
+            exit 1
+          fi
+          echo "✅ All files are properly contained in hubspot-sync-milli/ folder"
+          echo "✅ Plugin structure is WordPress-compatible"
+          echo "=== Archive Size ==="
+          ls -lh hubspot-sync-milli.zip
+          
+      - name: Upload release asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./hubspot-sync-milli.zip
+          asset_name: hubspot-sync-milli.zip
+          asset_content_type: application/zip

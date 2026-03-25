@@ -58,6 +58,12 @@ function hubspot_sync_milli_init() {
         return;
     }
 
+    // Load the updater class
+    require_once HUBSPOT_SYNC_MILLI_PLUGIN_DIR . 'includes/class-updater.php';
+    
+    // Initialize the updater
+    new HubSpot_Sync_Milli_Updater( HUBSPOT_SYNC_MILLI_PLUGIN_FILE );
+
     // Load the main plugin class
     require_once HUBSPOT_SYNC_MILLI_PLUGIN_DIR . 'includes/class-hubspot-sync-milli.php';
     

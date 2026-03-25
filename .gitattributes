@@ -1,0 +1,37 @@
+# .gitattributes - Controls which files are included in git archive exports
+
+# Include these files in exports
+*.php export
+*.css export
+*.js export
+*.json export
+*.txt export
+*.md export
+
+# Include specific important files
+LICENSE export
+composer.json export
+composer.lock export
+
+# Exclude development and testing files from exports
+.git* export-ignore
+.DS_Store export-ignore
+tests/ export-ignore
+examples/ export-ignore
+*.log export-ignore
+*.tmp export-ignore
+debug-*.php export-ignore
+test-*.php export-ignore
+
+# Exclude documentation that's not needed for plugin installation
+HOOKS_AND_TRIGGERS.md export-ignore
+SERIAL_NUMBERS.md export-ignore
+SHIPHERO-INTEGRATION-HOOK.md export-ignore
+HUBSPOT-SETUP.md export-ignore
+
+# Keep these documentation files
+README.md export
+ABANDONED_CART.md export
+
+# Include vendor directory (needed for HubSpot SDK)
+vendor/ export
