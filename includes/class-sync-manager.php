@@ -143,7 +143,7 @@ class HubSpot_Sync_Milli_Sync_Manager {
                 'email' => $email,
                 'firstname' => $order->get_billing_first_name(),
                 'lastname' => $order->get_billing_last_name(),
-                'phone' => $order->get_billing_phone(),
+                'phone' => $this->format_phone_number( $order->get_billing_phone() ),
                 'address' => $order->get_billing_address_1(),
                 'city' => $order->get_billing_city(),
                 'state' => $order->get_billing_state(),
@@ -198,24 +198,42 @@ class HubSpot_Sync_Milli_Sync_Manager {
      */
     private function sync_deal( $order ) {
         try {
-            // Generate unique cart ID
-            $unique_cart_id = $this->generate_unique_cart_id( $order );
+            // Check if this order came from an abandoned cart conversion
+            $abandoned_cart_hash = $order->get_meta( 'hubspot_cart_hash' );
             
-            // Search for existing deal
-            $existing_deal = $this->api->search_deal( $unique_cart_id );
-            
-            // Prepare deal data
-            $deal_data = array(
-                'dealname' => $this->generate_deal_name( $order ),
-                'amount' => $order->get_total(),
-                'tax_amount' => $order->get_total_tax(),
-                'closedate' => $order->get_date_paid() ? $order->get_date_paid()->format( 'Y-m-d' ) : null,
-                'pipeline' => $this->settings['deal_pipeline'] ?? 'default',
-                'dealstage' => $this->get_deal_stage( $order ),
-                'order_number' => $order->get_id(),
-                'deal_notes' => $order->get_customer_note(),
-                'woocommerce_unique_cart_id' => $unique_cart_id
-            );
+            if ( ! empty( $abandoned_cart_hash ) ) {
+                // This order came from an abandoned cart - use the cart hash to find the existing deal
+                $this->log_debug( "Order {$order->get_id()} came from abandoned cart with hash: {$abandoned_cart_hash}" );
+                $existing_deal = $this->search_deal_by_cart_hash( $abandoned_cart_hash );
+                
+                // For abandoned cart conversions, we want to update the existing deal
+                if ( $existing_deal ) {
+                    $this->log_debug( "Found existing abandoned cart deal {$existing_deal['id']} - will update with order data" );
+                    
+                    // Prepare deal data for completed order
+                    $deal_data = array(
+                        'dealname' => $this->generate_deal_name( $order ),
+                        'amount' => $order->get_total(),
+                        'tax_amount' => $order->get_total_tax(),
+                        'closedate' => $order->get_date_paid() ? $order->get_date_paid()->format( 'Y-m-d' ) : null,
+                        'pipeline' => $this->settings['deal_pipeline'] ?? 'default',
+                        'dealstage' => $this->get_deal_stage( $order ),
+                        'order_number' => $order->get_id(),
+                        'deal_notes' => $order->get_customer_note(),
+                        'cart_hash' => $abandoned_cart_hash,
+                        'order_source' => 'abandoned_cart_conversion'
+                    );
+                } else {
+                    $this->log_debug( "Abandoned cart hash {$abandoned_cart_hash} not found - treating as new order" );
+                    $existing_deal = null;
+                    $deal_data = $this->prepare_standard_deal_data( $order );
+                }
+            } else {
+                // Regular order - use standard unique cart ID logic
+                $unique_cart_id = $this->generate_unique_cart_id( $order );
+                $existing_deal = $this->api->search_deal( $unique_cart_id );
+                $deal_data = $this->prepare_standard_deal_data( $order, $unique_cart_id );
+            }
             
             // Add coupon information
             $coupons = $order->get_coupons();
@@ -280,7 +298,7 @@ class HubSpot_Sync_Milli_Sync_Manager {
             }
             
             // Create or update deal
-            $deal_id = $existing_deal ? $existing_deal->getId() : null;
+            $deal_id = $existing_deal ? ( is_array( $existing_deal ) ? $existing_deal['id'] : $existing_deal->getId() ) : null;
             $deal = $this->api->upsert_deal( $deal_data, $deal_id, $associations );
             
             if ( $deal ) {
@@ -292,7 +310,7 @@ class HubSpot_Sync_Milli_Sync_Manager {
                     'success' => true,
                     'message' => $deal_id ? 'Deal updated' : 'Deal created',
                     'deal_id' => $deal->getId(),
-                    'unique_cart_id' => $unique_cart_id,
+                    'unique_cart_id' => $abandoned_cart_hash ?? $unique_cart_id ?? '',
                     'data' => $deal_data
                 );
             } else {
@@ -311,6 +329,27 @@ class HubSpot_Sync_Milli_Sync_Manager {
     }
     
     /**
+     * Prepare standard deal data for non-abandoned cart orders
+     */
+    private function prepare_standard_deal_data( $order, $unique_cart_id = null ) {
+        if ( ! $unique_cart_id ) {
+            $unique_cart_id = $this->generate_unique_cart_id( $order );
+        }
+        
+        return array(
+            'dealname' => $this->generate_deal_name( $order ),
+            'amount' => $order->get_total(),
+            'tax_amount' => $order->get_total_tax(),
+            'closedate' => $order->get_date_paid() ? $order->get_date_paid()->format( 'Y-m-d' ) : null,
+            'pipeline' => $this->settings['deal_pipeline'] ?? 'default',
+            'dealstage' => $this->get_deal_stage( $order ),
+            'order_number' => $order->get_id(),
+            'deal_notes' => $order->get_customer_note(),
+            'woocommerce_unique_cart_id' => $unique_cart_id
+        );
+    }
+    
+    /**
      * Generate unique cart ID
      */
     private function generate_unique_cart_id( $order ) {
@@ -326,7 +365,7 @@ class HubSpot_Sync_Milli_Sync_Manager {
      */
     private function generate_deal_name( $order ) {
         $site_prefix = $this->get_site_prefix();
-        return "{" . $site_prefix . "} " . $order->get_order_number();
+        return "{" . $site_prefix . "} Order #" . $order->get_order_number();
     }
     
     /**
@@ -780,7 +819,7 @@ class HubSpot_Sync_Milli_Sync_Manager {
         try {
             $this->log_debug( "Starting abandoned cart sync for hash: {$cart_data['cart_hash']}" );
             
-            // First, search for existing deal with this cart hash
+            // Search for existing deal with this cart hash to prevent duplicates
             $existing_deal = $this->search_deal_by_cart_hash( $cart_data['cart_hash'] );
             
             // Create or update contact
@@ -807,8 +846,25 @@ class HubSpot_Sync_Milli_Sync_Manager {
                 $deal_id = $existing_deal['id'];
                 $this->log_debug( "Updated existing abandoned cart deal: {$deal_id}" );
             } else {
-                // Create new abandoned cart deal
-                $deal_result = $this->api->create_deal( $deal_data );
+                // Prepare associations for deal creation
+                $associations = array();
+                
+                // Create contact association
+                $association_spec = new \HubSpot\Client\Crm\Deals\Model\AssociationSpec();
+                $association_spec->setAssociationCategory( 'HUBSPOT_DEFINED' );
+                $association_spec->setAssociationTypeId( 3 ); // Deal to contact
+                
+                $to_object = new \HubSpot\Client\Crm\Deals\Model\PublicObjectId();
+                $to_object->setId( $contact_id );
+                
+                $association = new \HubSpot\Client\Crm\Deals\Model\PublicAssociationsForObject();
+                $association->setTypes( array( $association_spec ) );
+                $association->setTo( $to_object );
+                
+                $associations[] = $association;
+                
+                // Create new abandoned cart deal with associations
+                $deal_result = $this->api->create_deal_with_associations( $deal_data, $associations );
                 if ( ! $deal_result['success'] ) {
                     return array(
                         'success' => false,
@@ -816,10 +872,7 @@ class HubSpot_Sync_Milli_Sync_Manager {
                     );
                 }
                 $deal_id = $deal_result['deal_id'];
-                $this->log_debug( "Created new abandoned cart deal: {$deal_id}" );
-                
-                // Associate deal with contact
-                $this->api->create_association( 'deals', $deal_id, 'contacts', $contact_id, 'deal_to_contact' );
+                $this->log_debug( "Created new abandoned cart deal with contact association: {$deal_id}" );
             }
             
             return array(
@@ -845,7 +898,7 @@ class HubSpot_Sync_Milli_Sync_Manager {
         try {
             $this->log_debug( "Converting abandoned cart {$cart_hash} to order {$order->get_id()}" );
             
-            // Find existing abandoned cart deal
+            // Search for existing abandoned cart deal
             $existing_deal = $this->search_deal_by_cart_hash( $cart_hash );
             
             if ( ! $existing_deal ) {
@@ -902,24 +955,68 @@ class HubSpot_Sync_Milli_Sync_Manager {
      * Search for deal by cart hash
      */
     private function search_deal_by_cart_hash( $cart_hash ) {
+        $this->log_debug( "Searching for existing deal with cart hash: {$cart_hash}" );
+        
         $search_result = $this->api->search_deals( array(
             'filters' => array(
                 array(
-                    'propertyName' => 'hubspot_cart_hash',
+                    'propertyName' => 'cart_hash', // Use standard property name
                     'operator' => 'EQ',
                     'value' => $cart_hash
                 )
             ),
-            'properties' => array( 'id', 'dealname', 'dealstage', 'hubspot_cart_hash' )
+            'properties' => array( 'id', 'dealname', 'dealstage', 'cart_hash' )
         ));
         
+        $this->log_debug( "Deal search result: " . wp_json_encode( $search_result ) );
+        
         if ( $search_result['success'] && ! empty( $search_result['deals'] ) ) {
-            return $search_result['deals'][0]; // Return first match
+            // Check for duplicate deals with same cart hash
+            if ( count( $search_result['deals'] ) > 1 ) {
+                $deal_ids = array_column( $search_result['deals'], 'id' );
+                $this->log_error( "WARNING: Found " . count( $search_result['deals'] ) . " duplicate deals with cart hash {$cart_hash}: " . implode( ', ', $deal_ids ) . " - using first deal" );
+            }
+            
+            $existing_deal = $search_result['deals'][0];
+            $this->log_debug( "Found existing deal: " . $existing_deal['id'] . " - " . $existing_deal['dealname'] );
+            return $existing_deal; // Return first match
         }
         
+        $this->log_debug( "No existing deal found for cart hash: {$cart_hash}" );
         return null;
     }
     
+    /**
+     * Format phone number for HubSpot
+     */
+    private function format_phone_number( $phone ) {
+        // Remove all non-numeric characters except +
+        $phone = preg_replace( '/[^0-9+]/', '', $phone );
+        
+        // If phone is empty after cleaning, return empty string
+        if ( empty( $phone ) ) {
+            return '';
+        }
+        
+        // If phone doesn't start with +, assume US number and add +1
+        if ( ! str_starts_with( $phone, '+' ) ) {
+            // If it's a 10-digit US number, add +1
+            if ( strlen( $phone ) === 10 ) {
+                $phone = '+1' . $phone;
+            }
+            // If it's an 11-digit number starting with 1, add +
+            elseif ( strlen( $phone ) === 11 && str_starts_with( $phone, '1' ) ) {
+                $phone = '+' . $phone;
+            }
+            // Otherwise, assume US and add +1
+            else {
+                $phone = '+1' . $phone;
+            }
+        }
+        
+        return $phone;
+    }
+
     /**
      * Prepare contact data from cart data
      */
@@ -927,29 +1024,50 @@ class HubSpot_Sync_Milli_Sync_Manager {
         $contact_data = array(
             'email' => $cart_data['email'],
             'firstname' => $cart_data['first_name'] ?? '',
-            'lastname' => $cart_data['last_name'] ?? '',
-            'phone' => $cart_data['phone'] ?? '',
-            'company' => $cart_data['company'] ?? ''
+            'lastname' => $cart_data['last_name'] ?? ''
         );
         
-        // Add address data
+        // Format phone number properly for HubSpot
+        if ( ! empty( $cart_data['phone'] ) ) {
+            $contact_data['phone'] = $this->format_phone_number( $cart_data['phone'] );
+        }
+        
+        // Only add company if not empty
+        if ( ! empty( $cart_data['company'] ) ) {
+            $contact_data['company'] = $cart_data['company'];
+        }
+        
+        // Add address data if available
         if ( ! empty( $cart_data['checkout_data'] ) ) {
             $checkout_data = $cart_data['checkout_data'];
             
-            // Billing address
-            $contact_data['address'] = implode( ', ', array_filter( array(
+            // Only add address fields if they have values
+            if ( ! empty( $checkout_data['billing_city'] ) ) {
+                $contact_data['city'] = $checkout_data['billing_city'];
+            }
+            if ( ! empty( $checkout_data['billing_state'] ) ) {
+                $contact_data['state'] = $checkout_data['billing_state'];
+            }
+            if ( ! empty( $checkout_data['billing_postcode'] ) ) {
+                $contact_data['zip'] = $checkout_data['billing_postcode'];
+            }
+            if ( ! empty( $checkout_data['billing_country'] ) ) {
+                $contact_data['country'] = $checkout_data['billing_country'];
+            }
+            
+            // Build address string only if we have components
+            $address_parts = array_filter( array(
                 $checkout_data['billing_address_1'] ?? '',
                 $checkout_data['billing_address_2'] ?? '',
                 $checkout_data['billing_city'] ?? '',
                 $checkout_data['billing_state'] ?? '',
                 $checkout_data['billing_postcode'] ?? '',
                 $checkout_data['billing_country'] ?? ''
-            )));
+            ));
             
-            $contact_data['city'] = $checkout_data['billing_city'] ?? '';
-            $contact_data['state'] = $checkout_data['billing_state'] ?? '';
-            $contact_data['zip'] = $checkout_data['billing_postcode'] ?? '';
-            $contact_data['country'] = $checkout_data['billing_country'] ?? '';
+            if ( ! empty( $address_parts ) ) {
+                $contact_data['address'] = implode( ', ', $address_parts );
+            }
         }
         
         return $contact_data;
@@ -963,7 +1081,7 @@ class HubSpot_Sync_Milli_Sync_Manager {
             'email' => $order->get_billing_email(),
             'firstname' => $order->get_billing_first_name(),
             'lastname' => $order->get_billing_last_name(),
-            'phone' => $order->get_billing_phone(),
+            'phone' => $this->format_phone_number( $order->get_billing_phone() ),
             'company' => $order->get_billing_company(),
             'address' => implode( ', ', array_filter( array(
                 $order->get_billing_address_1(),
@@ -988,36 +1106,71 @@ class HubSpot_Sync_Milli_Sync_Manager {
         $site_prefix = $settings['site_prefix'] ?? '';
         
         $deal_data = array(
-            'dealname' => $site_prefix . ' cart #' . substr( $cart_data['cart_hash'], 0, 8 ),
-            'amount' => $cart_data['cart_total'],
-            'pipeline' => $settings['deal_pipeline'] ?? '',
+            'dealname' => '{' . $site_prefix . '} cart #' . substr( $cart_data['cart_hash'], 0, 8 ),
+            'amount' => (string) round( floatval( $cart_data['cart_total'] ), 2 ),
             'dealstage' => $settings['deal_stages']['abandoned'] ?? '',
-            'hubspot_cart_hash' => $cart_data['cart_hash'],
-            'woocommerce_order_id' => '', // Empty for abandoned carts
+            'cart_hash' => $cart_data['cart_hash'], // Use standard property name
             'order_source' => 'abandoned_cart'
         );
         
-        // Add tax and discount information
-        if ( isset( $cart_data['cart_tax'] ) ) {
-            $deal_data['tax_amount'] = $cart_data['cart_tax'];
+        // Only add pipeline if it's configured
+        if ( ! empty( $settings['deal_pipeline'] ) ) {
+            $deal_data['pipeline'] = $settings['deal_pipeline'];
+        }
+        
+        // Add deal owner if configured
+        if ( ! empty( $settings['owner_id'] ) ) {
+            $deal_data['hubspot_owner_id'] = $settings['owner_id'];
+        }
+        
+        // Add tax and discount information if available
+        if ( isset( $cart_data['cart_tax'] ) && $cart_data['cart_tax'] > 0 ) {
+            $deal_data['tax_amount'] = (string) round( floatval( $cart_data['cart_tax'] ), 2 );
         }
         
         if ( isset( $cart_data['discount_total'] ) && $cart_data['discount_total'] > 0 ) {
-            $deal_data['discount_amount'] = $cart_data['discount_total'];
+            $deal_data['discount_amount'] = (string) round( floatval( $cart_data['discount_total'] ), 2 );
         }
         
-        // Add coupon codes
+        // Add coupon codes if available
         if ( ! empty( $cart_data['applied_coupons'] ) ) {
             $deal_data['coupon_codes'] = implode( ', ', $cart_data['applied_coupons'] );
         }
         
-        // Add cart items information
+        // Add cart items information if available
         if ( ! empty( $cart_data['cart_items'] ) ) {
             $product_names = array();
             foreach ( $cart_data['cart_items'] as $cart_item ) {
-                $product_names[] = $cart_item['data']->get_name() . ' (x' . $cart_item['quantity'] . ')';
+                if ( isset( $cart_item['data'] ) ) {
+                    // Clean product name and limit length to prevent API errors
+                    $product_name = $cart_item['data']->get_name();
+                    $product_name = sanitize_text_field( $product_name );
+                    $product_names[] = $product_name . ' (x' . $cart_item['quantity'] . ')';
+                }
             }
-            $deal_data['products'] = implode( '; ', $product_names );
+            if ( ! empty( $product_names ) ) {
+                $products_string = implode( '; ', $product_names );
+                // Limit to 1000 characters to prevent HubSpot field length errors
+                if ( strlen( $products_string ) > 1000 ) {
+                    $products_string = substr( $products_string, 0, 997 ) . '...';
+                }
+                $deal_data['products'] = $products_string;
+            }
+        }
+        
+        // Remove any empty values that could cause validation errors
+        $deal_data = array_filter( $deal_data, function( $value ) {
+            return $value !== '' && $value !== null && $value !== array();
+        } );
+        
+        // Log the deal data being sent for debugging
+        error_log( '[HubSpot Sync - Milli] DEBUG: Deal data being sent: ' . wp_json_encode( $deal_data ) );
+        
+        // Verify cart_hash is present in deal data
+        if ( empty( $deal_data['cart_hash'] ) ) {
+            error_log( '[HubSpot Sync - Milli] WARNING: cart_hash is missing from deal data!' );
+        } else {
+            error_log( '[HubSpot Sync - Milli] DEBUG: cart_hash in deal data: ' . $deal_data['cart_hash'] );
         }
         
         return $deal_data;
@@ -1031,12 +1184,11 @@ class HubSpot_Sync_Milli_Sync_Manager {
         $site_prefix = $settings['site_prefix'] ?? '';
         
         $deal_data = array(
-            'dealname' => $site_prefix . ' order #' . $order->get_order_number(),
-            'amount' => $order->get_total(),
-            'pipeline' => $settings['deal_pipeline'] ?? '',
+            'dealname' => '{' . $site_prefix . '} Order #' . $order->get_order_number(),
+            'amount' => (string) round( floatval( $order->get_total() ), 2 ),
             'dealstage' => $this->get_deal_stage_for_order_status( $order->get_status() ),
-            'hubspot_cart_hash' => $cart_hash, // Keep cart hash for tracking
-            'woocommerce_order_id' => $order->get_id(),
+            'cart_hash' => $cart_hash, // Keep cart hash for tracking - use consistent property name
+            'woocommerce_order_id' => (string) $order->get_id(),
             'order_source' => 'converted_from_abandoned_cart',
             'order_status' => $order->get_status(),
             'order_date' => $order->get_date_created()->format( 'Y-m-d H:i:s' ),

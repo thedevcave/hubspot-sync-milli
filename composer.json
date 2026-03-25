@@ -1,0 +1,19 @@
+{
+    "name": "teamoutsiders/hubspot-sync-milli",
+    "description": "HubSpot integration for WooCommerce - Milli",
+    "type": "wordpress-plugin",
+    "require": {
+        "php": ">=7.4",
+        "hubspot/api-client": "^10.1"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "HubSpotSyncMilli\\": "includes/"
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

@@ -137,9 +137,11 @@ class HubSpot_Sync_Milli_Abandoned_Cart_Tracker {
             }
         }
         
-        // Generate new persistent hash using session-based identifier
+        // Generate new unique hash for fresh checkout session
+        // Include timestamp to ensure uniqueness across different shopping sessions
         $session_id = WC()->session ? WC()->session->get_customer_id() : uniqid( 'guest_' );
-        $unique_identifier = 'persistent_' . $session_id;
+        $timestamp = time();
+        $unique_identifier = 'cart_' . $session_id . '_' . $timestamp;
         
         // Create hash
         $hash_input = $email . $site_prefix . $unique_identifier;
@@ -160,7 +162,9 @@ class HubSpot_Sync_Milli_Abandoned_Cart_Tracker {
      */
     private function sync_abandoned_cart_to_hubspot( $cart_hash ) {
         try {
-            $sync_manager = new HubSpot_Sync_Milli_Sync_Manager();
+            // Get plugin settings
+            $settings = get_option( 'hubspot_sync_milli_settings', array() );
+            $sync_manager = new HubSpot_Sync_Milli_Sync_Manager( $settings );
             
             // Prepare cart data
             $cart_data = array(
@@ -215,6 +219,8 @@ class HubSpot_Sync_Milli_Abandoned_Cart_Tracker {
             // Clear the session hash since order is now complete
             if ( WC()->session ) {
                 WC()->session->__unset( 'hubspot_cart_hash' );
+                // Also clear any cart data to ensure fresh session for next checkout
+                WC()->session->set( 'cart', array() );
             }
             
             error_log( "[HubSpot Sync - Milli] Converting abandoned cart {$cart_hash} to completed order {$order_id}" );
@@ -229,7 +235,9 @@ class HubSpot_Sync_Milli_Abandoned_Cart_Tracker {
      */
     private function convert_abandoned_cart_to_order( $cart_hash, $order ) {
         try {
-            $sync_manager = new HubSpot_Sync_Milli_Sync_Manager();
+            // Get plugin settings
+            $settings = get_option( 'hubspot_sync_milli_settings', array() );
+            $sync_manager = new HubSpot_Sync_Milli_Sync_Manager( $settings );
             $result = $sync_manager->convert_abandoned_cart_to_order( $cart_hash, $order );
             
             if ( $result['success'] ) {

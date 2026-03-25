@@ -68,23 +68,28 @@ class HubSpot_Sync_Milli_Admin_Settings {
             <form method="post" action="options.php">
                 <?php
                 settings_fields( 'hubspot_sync_milli_settings_group' );
-                do_settings_sections( 'hubspot_sync_milli_settings_group' );
                 
-                // Add hidden field to preserve tab on redirect
+                // Add hidden field to preserve tab on redirect and identify which tab is being saved
+                echo '<input type="hidden" name="current_tab" value="' . esc_attr( $current_tab ) . '" />';
+                echo '<input type="hidden" name="hubspot_sync_milli_settings[_active_tab]" value="' . esc_attr( $current_tab ) . '" />';
                 echo '<input type="hidden" name="_wp_http_referer" value="' . esc_attr( admin_url( 'admin.php?page=hubspot-sync-milli&tab=' . $current_tab ) ) . '" />';
                 
-                // Render current tab content
+                // Render current tab content with proper section
                 switch ( $current_tab ) {
                     case 'contact-sync':
+                        do_settings_sections( 'hubspot_sync_milli_contact_sync' );
                         $this->render_contact_sync_tab();
                         break;
                     case 'deal-sync':
+                        do_settings_sections( 'hubspot_sync_milli_deal_sync' );
                         $this->render_deal_sync_tab();
                         break;
                     case 'advanced':
+                        do_settings_sections( 'hubspot_sync_milli_advanced' );
                         $this->render_advanced_tab();
                         break;
                     default:
+                        do_settings_sections( 'hubspot_sync_milli_general' );
                         $this->render_general_tab();
                         break;
                 }

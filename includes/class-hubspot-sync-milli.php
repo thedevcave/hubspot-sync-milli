@@ -62,6 +62,7 @@ class HubSpot_Sync_Milli {
         add_action( 'init', array( $this, 'init_hooks' ), 10 );
         add_action( 'admin_menu', array( $this, 'add_admin_menu' ) );
         add_action( 'admin_init', array( $this, 'register_settings' ) );
+        add_action( 'admin_init', array( $this, 'handle_settings_redirect' ) );
         
         // WooCommerce hooks
         add_action( 'woocommerce_checkout_order_processed', array( $this, 'on_order_processed' ), 20, 3 );
@@ -157,9 +158,43 @@ class HubSpot_Sync_Milli {
      * Register settings
      */
     public function register_settings() {
-        register_setting( 'hubspot_sync_milli_settings_group', 'hubspot_sync_milli_settings', array(
-            'sanitize_callback' => array( $this, 'sanitize_settings' )
-        ) );
+        // Register the setting
+        register_setting( 
+            'hubspot_sync_milli_settings_group', 
+            'hubspot_sync_milli_settings', 
+            array(
+                'sanitize_callback' => array( $this, 'sanitize_settings' )
+            )
+        );
+        
+        // Register sections for each tab
+        add_settings_section(
+            'hubspot_sync_milli_general',
+            '',
+            '__return_false',
+            'hubspot_sync_milli_general'
+        );
+        
+        add_settings_section(
+            'hubspot_sync_milli_contact_sync',
+            '',
+            '__return_false',
+            'hubspot_sync_milli_contact_sync'
+        );
+        
+        add_settings_section(
+            'hubspot_sync_milli_deal_sync',
+            '',
+            '__return_false',
+            'hubspot_sync_milli_deal_sync'
+        );
+        
+        add_settings_section(
+            'hubspot_sync_milli_advanced',
+            '',
+            '__return_false',
+            'hubspot_sync_milli_advanced'
+        );
     }
     
     /**
@@ -171,8 +206,13 @@ class HubSpot_Sync_Milli {
              isset( $_GET['page'] ) && 
              $_GET['page'] === 'hubspot-sync-milli' ) {
             
-            // Get the active tab from POST data if it exists
-            $active_tab = isset( $_GET['tab'] ) ? sanitize_text_field( $_GET['tab'] ) : 'general';
+            // Get the active tab from POST data or URL parameter
+            $active_tab = 'general';
+            if ( isset( $_POST['current_tab'] ) ) {
+                $active_tab = sanitize_text_field( $_POST['current_tab'] );
+            } elseif ( isset( $_GET['tab'] ) ) {
+                $active_tab = sanitize_text_field( $_GET['tab'] );
+            }
             
             // Remove settings-updated to prevent duplicate notifications
             $redirect_url = remove_query_arg( 'settings-updated' );
@@ -220,52 +260,93 @@ class HubSpot_Sync_Milli {
      * Sanitize settings
      */
     public function sanitize_settings( $input ) {
-        $sanitized = array();
+        // Start with existing settings to preserve values from other tabs
+        $existing_settings = get_option( 'hubspot_sync_milli_settings', array() );
+        $sanitized = $existing_settings;
         
-        // Sanitize each setting
-        $sanitized['api_token'] = sanitize_text_field( $input['api_token'] ?? '' );
-        $sanitized['site_environment'] = sanitize_text_field( $input['site_environment'] ?? 'staging' );
-        $sanitized['site_prefix'] = sanitize_text_field( $input['site_prefix'] ?? '' );
-        $sanitized['owner_id'] = sanitize_text_field( $input['owner_id'] ?? '' );
-        $sanitized['deal_pipeline'] = sanitize_text_field( $input['deal_pipeline'] ?? '' );
+        // Determine which tab is being saved
+        $active_tab = isset( $input['_active_tab'] ) ? $input['_active_tab'] : 'general';
         
-        // Deal stages
-        $sanitized['deal_stages'] = array();
+        // Only update fields that are actually present in the input
+        // This allows each tab to only update its own fields
+        
+        // General tab fields
+        if ( isset( $input['api_token'] ) ) {
+            $sanitized['api_token'] = sanitize_text_field( $input['api_token'] );
+        }
+        if ( isset( $input['site_environment'] ) ) {
+            $sanitized['site_environment'] = sanitize_text_field( $input['site_environment'] );
+        }
+        if ( isset( $input['site_prefix'] ) ) {
+            $sanitized['site_prefix'] = sanitize_text_field( $input['site_prefix'] );
+        }
+        if ( isset( $input['owner_id'] ) ) {
+            $sanitized['owner_id'] = sanitize_text_field( $input['owner_id'] );
+        }
+        if ( isset( $input['deal_pipeline'] ) ) {
+            $sanitized['deal_pipeline'] = sanitize_text_field( $input['deal_pipeline'] );
+        }
+        
+        // Handle debug logging checkbox for general tab
+        if ( $active_tab === 'general' ) {
+            $sanitized['debug_logging'] = ! empty( $input['debug_logging'] );
+        } elseif ( isset( $input['debug_logging'] ) ) {
+            $sanitized['debug_logging'] = ! empty( $input['debug_logging'] );
+        }
+        
+        // Deal stages - only update if present
         if ( isset( $input['deal_stages'] ) && is_array( $input['deal_stages'] ) ) {
+            $sanitized['deal_stages'] = array();
             foreach ( $input['deal_stages'] as $key => $value ) {
                 $sanitized['deal_stages'][ sanitize_key( $key ) ] = sanitize_text_field( $value );
             }
         }
         
-        // Contact field mapping
-        $sanitized['contact_field_mapping'] = array();
+        // Contact field mapping - only update if present  
         if ( isset( $input['contact_field_mapping'] ) && is_array( $input['contact_field_mapping'] ) ) {
+            $sanitized['contact_field_mapping'] = array();
             foreach ( $input['contact_field_mapping'] as $key => $value ) {
                 $sanitized['contact_field_mapping'][ sanitize_key( $key ) ] = sanitize_text_field( $value );
             }
         }
         
-        // Association IDs
-        $sanitized['association_ids'] = array();
+        // Handle contact sync checkbox for contact-sync tab
+        if ( $active_tab === 'contact-sync' ) {
+            $sanitized['sync_contact_fields'] = ! empty( $input['sync_contact_fields'] );
+        } elseif ( isset( $input['sync_contact_fields'] ) ) {
+            $sanitized['sync_contact_fields'] = ! empty( $input['sync_contact_fields'] );
+        }
+        
+        // Handle deal sync checkbox for deal-sync tab  
+        if ( $active_tab === 'deal-sync' ) {
+            $sanitized['sync_deal_fields'] = ! empty( $input['sync_deal_fields'] );
+        } elseif ( isset( $input['sync_deal_fields'] ) ) {
+            $sanitized['sync_deal_fields'] = ! empty( $input['sync_deal_fields'] );
+        }
+        
+        // Association IDs - only update if present
         if ( isset( $input['association_ids'] ) && is_array( $input['association_ids'] ) ) {
+            $sanitized['association_ids'] = array();
             foreach ( $input['association_ids'] as $key => $value ) {
                 $sanitized['association_ids'][ sanitize_key( $key ) ] = sanitize_text_field( $value );
             }
         }
         
-        // Other settings
-        $sanitized['serial_numbers_folder_id'] = sanitize_text_field( $input['serial_numbers_folder_id'] ?? '' );
-        $sanitized['sync_contact_fields'] = ! empty( $input['sync_contact_fields'] );
-        $sanitized['sync_deal_fields'] = ! empty( $input['sync_deal_fields'] );
-        $sanitized['debug_logging'] = ! empty( $input['debug_logging'] );
+        // Serial numbers folder ID
+        if ( isset( $input['serial_numbers_folder_id'] ) ) {
+            $sanitized['serial_numbers_folder_id'] = sanitize_text_field( $input['serial_numbers_folder_id'] );
+        }
         
-        // Sync triggers
-        $sanitized['sync_on_status_change'] = array();
+        // Sync triggers - only update if present
         if ( isset( $input['sync_on_status_change'] ) && is_array( $input['sync_on_status_change'] ) ) {
+            $sanitized['sync_on_status_change'] = array();
             foreach ( $input['sync_on_status_change'] as $status ) {
                 $sanitized['sync_on_status_change'][] = sanitize_text_field( $status );
             }
         }
+        
+        // Clean up the internal field
+        unset( $sanitized['_active_tab'] );
         
         return $sanitized;
     }

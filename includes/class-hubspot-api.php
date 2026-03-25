@@ -39,12 +39,15 @@ class HubSpot_Sync_Milli_HubSpot_API {
             return;
         }
         
-        if ( class_exists( 'HubSpot\Factory' ) ) {
-            try {
-                $this->client = HubSpot\Factory::createWithAccessToken( $this->settings['api_token'] );
-            } catch ( Exception $e ) {
-                error_log( 'HubSpot API Client Error: ' . $e->getMessage() );
-            }
+        if ( ! class_exists( 'HubSpot\Factory' ) ) {
+            error_log( '[HubSpot Sync - Milli] ERROR: HubSpot SDK not found. Make sure vendor/autoload.php is loaded.' );
+            return;
+        }
+        
+        try {
+            $this->client = HubSpot\Factory::createWithAccessToken( $this->settings['api_token'] );
+        } catch ( Exception $e ) {
+            error_log( '[HubSpot Sync - Milli] ERROR: Failed to initialize HubSpot client: ' . $e->getMessage() );
         }
     }
     
@@ -60,14 +63,15 @@ class HubSpot_Sync_Milli_HubSpot_API {
         }
         
         try {
-            // Try to get account info
-            $account_info = $this->client->settings()->users()->usersApi()->getPage();
+            // Try to get a simple contacts list (with limit 1 to minimize API usage)
+            $contacts = $this->client->crm()->contacts()->basicApi()->getPage( 1 );
             
             return array(
                 'success' => true,
                 'message' => __( 'Connection successful!', 'hubspot-sync-milli' ),
                 'data' => array(
-                    'portal_id' => $account_info->getResults()[0]->getPortalId() ?? 'Unknown'
+                    'total_contacts' => count( $contacts->getResults() ),
+                    'api_working' => true
                 )
             );
             
@@ -136,7 +140,16 @@ class HubSpot_Sync_Milli_HubSpot_API {
             return $contact;
             
         } catch ( Exception $e ) {
-            error_log( 'HubSpot Upsert Contact Error: ' . $e->getMessage() );
+            // Log complete error response for debugging
+            $error_message = $e->getMessage();
+            error_log( 'HubSpot Upsert Contact Error: ' . $error_message );
+            
+            // Try to extract full response body if available
+            if ( method_exists( $e, 'getResponse' ) && $e->getResponse() ) {
+                $response_body = (string) $e->getResponse()->getBody();
+                error_log( 'HubSpot Upsert Contact Full Response: ' . $response_body );
+            }
+            
             return false;
         }
     }
@@ -202,7 +215,16 @@ class HubSpot_Sync_Milli_HubSpot_API {
             return $deal;
             
         } catch ( Exception $e ) {
-            error_log( 'HubSpot Upsert Deal Error: ' . $e->getMessage() );
+            // Log complete error response for debugging
+            $error_message = $e->getMessage();
+            error_log( 'HubSpot Upsert Deal Error: ' . $error_message );
+            
+            // Try to extract full response body if available
+            if ( method_exists( $e, 'getResponse' ) && $e->getResponse() ) {
+                $response_body = (string) $e->getResponse()->getBody();
+                error_log( 'HubSpot Upsert Deal Full Response: ' . $response_body );
+            }
+            
             return false;
         }
     }
@@ -386,6 +408,8 @@ class HubSpot_Sync_Milli_HubSpot_API {
         }
         
         try {
+            error_log( '[HubSpot Sync - Milli] DEBUG: Searching deals with params: ' . wp_json_encode( $search_params ) );
+            
             $filter_groups = array();
             
             if ( isset( $search_params['filters'] ) ) {
@@ -413,13 +437,22 @@ class HubSpot_Sync_Milli_HubSpot_API {
             $results = $this->client->crm()->deals()->searchApi()->doSearch( $search_request );
             $deals = $results->getResults();
             
+            error_log( '[HubSpot Sync - Milli] DEBUG: Found ' . count( $deals ) . ' deals in search results' );
+            
             $formatted_deals = array();
             foreach ( $deals as $deal ) {
                 $properties = $deal->getProperties();
-                $formatted_deals[] = array(
+                
+                // Format deal data to match expected structure
+                $formatted_deal = array(
                     'id' => $deal->getId(),
-                    'properties' => $properties
+                    'dealname' => $properties['dealname'] ?? '',
+                    'dealstage' => $properties['dealstage'] ?? '',
+                    'cart_hash' => $properties['cart_hash'] ?? ''
                 );
+                
+                $formatted_deals[] = $formatted_deal;
+                error_log( '[HubSpot Sync - Milli] DEBUG: Found deal: ' . wp_json_encode( $formatted_deal ) );
             }
             
             return array( 
@@ -428,10 +461,18 @@ class HubSpot_Sync_Milli_HubSpot_API {
             );
             
         } catch ( Exception $e ) {
-            error_log( 'HubSpot Search Deals Error: ' . $e->getMessage() );
+            $error_message = $e->getMessage();
+            error_log( 'HubSpot Search Deals Error: ' . $error_message );
+            
+            // Try to extract full response body if available
+            if ( method_exists( $e, 'getResponse' ) && $e->getResponse() ) {
+                $response_body = (string) $e->getResponse()->getBody();
+                error_log( 'HubSpot Search Deals Full Response: ' . $response_body );
+            }
+            
             return array( 
                 'success' => false, 
-                'message' => $e->getMessage() 
+                'message' => $error_message 
             );
         }
     }
@@ -479,6 +520,34 @@ class HubSpot_Sync_Milli_HubSpot_API {
         }
     }
     
+    /**
+     * Create deal with associations
+     */
+    public function create_deal_with_associations( $deal_data, $associations = array() ) {
+        if ( ! $this->client ) {
+            return array( 'success' => false, 'message' => 'No HubSpot client' );
+        }
+        
+        try {
+            $result = $this->upsert_deal( $deal_data, null, $associations );
+            if ( $result ) {
+                return array( 
+                    'success' => true, 
+                    'deal_id' => $result->getId() 
+                );
+            }
+            
+            return array( 'success' => false, 'message' => 'Failed to create deal' );
+            
+        } catch ( Exception $e ) {
+            error_log( 'HubSpot Create Deal with Associations Error: ' . $e->getMessage() );
+            return array( 
+                'success' => false, 
+                'message' => $e->getMessage() 
+            );
+        }
+    }
+
     /**
      * Create deal
      */
@@ -555,10 +624,19 @@ class HubSpot_Sync_Milli_HubSpot_API {
             return array( 'success' => true );
             
         } catch ( Exception $e ) {
-            error_log( 'HubSpot Create Association Error: ' . $e->getMessage() );
+            // Log complete error response for debugging  
+            $error_message = $e->getMessage();
+            error_log( 'HubSpot Create Association Error: ' . $error_message );
+            
+            // Try to extract full response body if available
+            if ( method_exists( $e, 'getResponse' ) && $e->getResponse() ) {
+                $response_body = (string) $e->getResponse()->getBody();
+                error_log( 'HubSpot Association Full Response: ' . $response_body );
+            }
+            
             return array( 
                 'success' => false, 
-                'message' => $e->getMessage() 
+                'message' => $error_message 
             );
         }
     }
