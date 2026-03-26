@@ -48,29 +48,83 @@ class HubSpot_Sync_Milli_Checkout_Fields_Simple {
      */
     public function render_fields( $checkout ) {
         echo '<div id="hubspot-simple-checkout-fields">';
-        echo '<h3>' . esc_html__( 'Help us serve you better', 'hubspot-sync-milli' ) . '</h3>';
+        echo '<h3 style="margin-top: 30px;padding: 0;font-size: 26px;color: #85334e;">' . esc_html__( 'How did you hear about us?', 'hubspot-sync-milli' ) . '</h3>';
         
         // Single healthcare provider referral question
-        woocommerce_form_field( 'provider_referred', array(
-            'type'     => 'radio',
-            'class'    => array( 'form-row-wide' ),
-            'label'    => esc_html__( 'Were you referred by a healthcare provider?', 'hubspot-sync-milli' ),
-            'required' => false,
-            'options'  => array(
-                'Yes' => esc_html__( 'Yes', 'hubspot-sync-milli' ),
-                'No'  => esc_html__( 'No', 'hubspot-sync-milli' )
-            )
-        ), $checkout->get_value( 'provider_referred' ) );
+        echo '<p class="form-row form-row-wide hubspot-simple-radio-field" id="provider_referred_field">';
+        echo '<label class="main-field-label">' . esc_html__( 'Were you referred by a healthcare provider?', 'hubspot-sync-milli' ) . ' <abbr class="required" title="required">*</abbr></label>';
         
+        echo '<span class="woocommerce-input-wrapper">';
+        $current_value = $checkout->get_value( 'provider_referred' );
+        
+        $options = array(
+            'Yes' => esc_html__( 'Yes', 'hubspot-sync-milli' ),
+            'No'  => esc_html__( 'No', 'hubspot-sync-milli' )
+        );
+        
+        foreach ( $options as $option_key => $option_text ) {
+            $checked = checked( $current_value, $option_key, false );
+            echo '<label class="radio-option" style="display:inline-block;margin-right:20px;cursor:pointer;">';
+            echo '<input type="radio" name="provider_referred" id="provider_referred_' . esc_attr( $option_key ) . '" value="' . esc_attr( $option_key ) . '" ' . $checked . ' />';
+            echo ' ' . esc_html( $option_text );
+            echo '</label>';
+        }
+        
+        echo '</span>';
+        echo '</p>';
         echo '</div>';
+        
+        // Add custom styling
+        $this->add_checkout_styles();
+    }
+    
+    /**
+     * Add custom CSS for better radio button display
+     */
+    private function add_checkout_styles() {
+        ?>
+        <style type="text/css">
+        #hubspot-simple-checkout-fields .hubspot-simple-radio-field .main-field-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        
+        #hubspot-simple-checkout-fields .hubspot-simple-radio-field .woocommerce-input-wrapper {
+            display: block;
+        }
+        
+        #hubspot-simple-checkout-fields .hubspot-simple-radio-field .radio-option {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: normal;
+            cursor: pointer;
+        }
+        
+        #hubspot-simple-checkout-fields .hubspot-simple-radio-field .radio-option input[type="radio"] {
+            margin-right: 6px;
+            vertical-align: middle;
+        }
+        
+        #hubspot-simple-checkout-fields .hubspot-simple-radio-field .required {
+            color: #ff0000;
+            text-decoration: none;
+        }
+        </style>
+        <?php
     }
     
     /**
      * Validate checkout fields
      */
     public function validate_fields() {
-        // No validation required - field is optional
-        // Could add validation here if needed in the future
+        // Validate that the provider_referred field is filled
+        if ( empty( $_POST['provider_referred'] ) ) {
+            wc_add_notice( 
+                esc_html__( 'Please let us know if you were referred by a healthcare provider.', 'hubspot-sync-milli' ), 
+                'error' 
+            );
+        }
     }
     
     /**
