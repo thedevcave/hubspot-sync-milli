@@ -125,14 +125,18 @@ class HubSpot_Sync_Milli_Sync_Manager {
         
         try {
             // Get custom field values
-            if ( ! class_exists( 'HubSpot_Sync_Milli_Checkout_Fields' ) ) {
+            $class_name = defined( 'HUBSPOT_SYNC_MILLI_USE_SIMPLE_CHECKOUT' ) && HUBSPOT_SYNC_MILLI_USE_SIMPLE_CHECKOUT 
+                ? 'HubSpot_Sync_Milli_Checkout_Fields_Simple' 
+                : 'HubSpot_Sync_Milli_Checkout_Fields';
+                
+            if ( ! class_exists( $class_name ) ) {
                 return array(
                     'success' => false,
                     'message' => 'Checkout fields class not found'
                 );
             }
             
-            $checkout_fields = new HubSpot_Sync_Milli_Checkout_Fields( $this->settings );
+            $checkout_fields = new $class_name( $this->settings );
             $custom_fields = $checkout_fields->get_order_field_values( $order->get_id() );
             
             // Search for existing contact

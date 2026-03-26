@@ -104,7 +104,14 @@ class HubSpot_Sync_Milli {
         // Load admin classes
         require_once HUBSPOT_SYNC_MILLI_PLUGIN_DIR . 'includes/class-admin-settings.php';
         require_once HUBSPOT_SYNC_MILLI_PLUGIN_DIR . 'includes/class-hubspot-api.php';
-        require_once HUBSPOT_SYNC_MILLI_PLUGIN_DIR . 'includes/class-checkout-fields.php';
+        
+        // Load checkout fields class based on configuration
+        if ( defined( 'HUBSPOT_SYNC_MILLI_USE_SIMPLE_CHECKOUT' ) && HUBSPOT_SYNC_MILLI_USE_SIMPLE_CHECKOUT ) {
+            require_once HUBSPOT_SYNC_MILLI_PLUGIN_DIR . 'includes/class-checkout-fields-simple.php';
+        } else {
+            require_once HUBSPOT_SYNC_MILLI_PLUGIN_DIR . 'includes/class-checkout-fields.php';
+        }
+        
         require_once HUBSPOT_SYNC_MILLI_PLUGIN_DIR . 'includes/class-sync-manager.php';
         require_once HUBSPOT_SYNC_MILLI_PLUGIN_DIR . 'includes/class-serial-number-manager.php';
         require_once HUBSPOT_SYNC_MILLI_PLUGIN_DIR . 'includes/class-abandoned-cart-tracker.php';
@@ -381,11 +388,15 @@ class HubSpot_Sync_Milli {
      * Add checkout fields
      */
     public function add_checkout_fields( $checkout ) {
-        if ( ! class_exists( 'HubSpot_Sync_Milli_Checkout_Fields' ) ) {
+        $class_name = defined( 'HUBSPOT_SYNC_MILLI_USE_SIMPLE_CHECKOUT' ) && HUBSPOT_SYNC_MILLI_USE_SIMPLE_CHECKOUT 
+            ? 'HubSpot_Sync_Milli_Checkout_Fields_Simple' 
+            : 'HubSpot_Sync_Milli_Checkout_Fields';
+            
+        if ( ! class_exists( $class_name ) ) {
             return;
         }
         
-        $checkout_fields = new HubSpot_Sync_Milli_Checkout_Fields( $this->settings );
+        $checkout_fields = new $class_name( $this->settings );
         $checkout_fields->render_fields( $checkout );
     }
     
@@ -393,11 +404,15 @@ class HubSpot_Sync_Milli {
      * Save checkout fields
      */
     public function save_checkout_fields( $order_id ) {
-        if ( ! class_exists( 'HubSpot_Sync_Milli_Checkout_Fields' ) ) {
+        $class_name = defined( 'HUBSPOT_SYNC_MILLI_USE_SIMPLE_CHECKOUT' ) && HUBSPOT_SYNC_MILLI_USE_SIMPLE_CHECKOUT 
+            ? 'HubSpot_Sync_Milli_Checkout_Fields_Simple' 
+            : 'HubSpot_Sync_Milli_Checkout_Fields';
+            
+        if ( ! class_exists( $class_name ) ) {
             return;
         }
         
-        $checkout_fields = new HubSpot_Sync_Milli_Checkout_Fields( $this->settings );
+        $checkout_fields = new $class_name( $this->settings );
         $checkout_fields->save_fields( $order_id );
     }
     
