@@ -117,15 +117,37 @@ graph LR
 
 ## 📊 Field Mapping
 
+### 🛒 Checkout Fields Configuration
+
+The plugin supports **two checkout field implementations**:
+
+#### **Full Checkout Fields (Default)**
+- Multi-step conditional form with acquisition source dropdown
+- Healthcare provider conversation questions  
+- Conditional provider referral questions
+- Provider detail collection (name, clinic, state)
+
+#### **Simplified Checkout Fields**
+- Single radio button: "Were you referred by a healthcare provider?"
+- Yes/No options only
+- Streamlined user experience
+
+**To Switch to Simplified Checkout:**
+1. Open `hubspot-sync-milli.php`
+2. Change: `define( 'HUBSPOT_SYNC_MILLI_USE_SIMPLE_CHECKOUT', true );`
+3. Save the file
+
+> **Note**: Both implementations map to the same HubSpot properties, ensuring data consistency.
+
 ### Checkout Fields → HubSpot Properties
-| Checkout Field | HubSpot Property | Type | Description |
-|---|---|---|---|
-| **Acquisition Source** | `how_did_you_hear_about_us_consumer` | Dropdown | Marketing attribution |
-| **Clinician Name** | `referring_clinician` | Text | Healthcare provider |
-| **Clinic State** | `referring_state` | Dropdown | Provider location |
-| **Clinic Name** | `referring_clinic` | Text | Practice name |
-| **Provider Conversation** | `have_you_talked_to_healthcare_provider` | Yes/No | Consultation status |
-| **Provider Referral** | `did_your_provider_refer_you_to_milli_` | Yes/No | Referral verification |
+| Checkout Field | HubSpot Property | Type | Description | Available In |
+|---|---|---|---|---|
+| **Acquisition Source** | `how_did_you_hear_about_us_consumer` | Dropdown | Marketing attribution | Full Only |
+| **Clinician Name** | `referring_clinician` | Text | Healthcare provider | Full Only |
+| **Clinic State** | `referring_state` | Dropdown | Provider location | Full Only |
+| **Clinic Name** | `referring_clinic` | Text | Practice name | Full Only |
+| **Provider Conversation** | `have_you_talked_to_healthcare_provider` | Yes/No | Consultation status | Full Only |
+| **Provider Referral** | `did_your_provider_refer_you_to_milli_` | Yes/No | Referral verification | Both Versions |
 
 ### Device Properties
 | Property | Source | Description |
@@ -198,12 +220,14 @@ hubspot-sync-milli/
 ├── README.md                           # This documentation
 ├── ABANDONED_CART.md                   # Abandoned cart guide  
 ├── SERIAL_NUMBERS.md                   # Device integration guide
+├── CHECKOUT_FIELDS.md                  # Checkout fields configuration guide
 ├── HOOKS_AND_TRIGGERS.md              # Complete hook reference
 ├── includes/
 │   ├── class-hubspot-sync-milli.php    # Core plugin orchestration
 │   ├── class-admin-settings.php        # Admin interface & settings
 │   ├── class-hubspot-api.php          # HubSpot API wrapper
-│   ├── class-checkout-fields.php       # Custom checkout fields
+│   ├── class-checkout-fields.php       # Full checkout fields implementation
+│   ├── class-checkout-fields-simple.php # Simplified checkout fields
 │   ├── class-sync-manager.php         # Sync orchestration & logic
 │   ├── class-abandoned-cart-tracker.php # Real-time cart tracking
 │   └── class-serial-number-manager.php # Device management utilities
@@ -395,6 +419,15 @@ For enterprise implementation, custom development, or technical support:
 ---
 
 ## 🔄 Changelog
+
+### Version 1.0.1 - Simplified Checkout Fields
+- ✨ **New**: Simplified checkout fields implementation option
+- ✨ **New**: Single healthcare provider referral question (`class-checkout-fields-simple.php`)
+- ✨ **New**: Easy switching between full and simplified checkout via configuration constant
+- ✨ **New**: `CHECKOUT_FIELDS.md` documentation for implementation switching
+- 🔧 **Enhanced**: Dynamic class loading system supports multiple checkout implementations
+- 🔧 **Enhanced**: Backward compatibility maintained for existing field mappings
+- 📖 **Updated**: README with checkout configuration documentation
 
 ### Version 1.0.0 - Complete Rewrite
 - ✨ **New**: Advanced abandoned cart tracking with conversion prevention
