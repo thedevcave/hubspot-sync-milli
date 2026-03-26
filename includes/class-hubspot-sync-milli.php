@@ -152,7 +152,8 @@ class HubSpot_Sync_Milli {
      * Add admin menu
      */
     public function add_admin_menu() {
-        add_options_page(
+        add_submenu_page(
+            'woocommerce',
             __( 'HubSpot Sync - Milli', 'hubspot-sync-milli' ),
             __( 'HubSpot Sync', 'hubspot-sync-milli' ),
             'manage_options',
