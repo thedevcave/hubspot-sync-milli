@@ -1,3 +1,9 @@
+---
+layout: page
+title: Serial Numbers & Devices
+nav_order: 3
+---
+
 # HubSpot Sync - Milli: Serial Number Integration
 
 This document explains how to integrate serial numbers with the HubSpot Sync - Milli plugin.

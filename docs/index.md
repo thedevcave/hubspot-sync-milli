@@ -1,6 +1,6 @@
 ---
-title: HubSpot Sync - Milli Documentation
-layout: default
+layout: home
+title: Documentation
 ---
 
 # HubSpot Sync - Milli Documentation

@@ -1,3 +1,9 @@
+---
+layout: page
+title: Complete Overview
+nav_order: 1
+---
+
 # HubSpot Sync - Milli
 
 A comprehensive WordPress plugin that provides complete WooCommerce-to-HubSpot integration with advanced abandoned cart tracking, device management, and external system integration. Built by Team Outsiders as a modern, consolidated replacement for multiple HubSpot gateway plugins.

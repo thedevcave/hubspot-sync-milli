@@ -1,3 +1,9 @@
+---
+layout: page
+title: Checkout Field Configuration
+nav_order: 4
+---
+
 # Checkout Fields Configuration
 
 The HubSpot Sync - Milli plugin supports two different checkout field implementations:

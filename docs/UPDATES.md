@@ -1,3 +1,9 @@
+---
+layout: page
+title: Updates & Installation
+nav_order: 7
+---
+
 # Plugin Updates
 
 The HubSpot Sync - Milli plugin automatically checks for updates from the public GitHub repository.

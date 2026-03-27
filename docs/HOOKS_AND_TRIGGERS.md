@@ -1,3 +1,9 @@
+---
+layout: page
+title: Developer Reference
+nav_order: 5
+---
+
 # Complete Hook and Trigger Mapping
 
 This document provides a comprehensive mapping of ALL hooks, triggers, and execution points in the HubSpot Sync - Milli plugin.

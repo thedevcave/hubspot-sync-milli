@@ -1,3 +1,9 @@
+---
+layout: page
+title: Abandoned Cart Guide
+nav_order: 2
+---
+
 # HubSpot Sync - Milli: Enhanced Abandoned Cart Tracking
 
 This document explains the enhanced abandoned cart functionality that tracks cart-to-order transitions and prevents duplicate deals.

@@ -1,0 +1,30 @@
+title: HubSpot Sync - Milli Documentation
+description: Complete documentation for the HubSpot WooCommerce integration plugin
+url: "https://thedevcave.github.io"
+baseurl: "/hubspot-sync-milli"
+
+# Theme for GitHub Pages
+theme: minima
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
+
+# GitHub Pages settings
+github_username: thedevcave
+repository: hubspot-sync-milli
+
+# Content settings
+markdown: kramdown
+highlighter: rouge
+
+# Navigation - files in current directory
+header_pages:
+  - ABANDONED_CART.md
+  - SERIAL_NUMBERS.md
+  - HOOKS_AND_TRIGGERS.md
+  - CHECKOUT_FIELDS.md
+  - HUBSPOT-SETUP.md
+
+# Simple deployment from docs folder
+exclude:
+  - "*.tmp"

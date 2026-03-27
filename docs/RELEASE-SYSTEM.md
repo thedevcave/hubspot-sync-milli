@@ -1,3 +1,9 @@
+---
+layout: page
+title: Release System
+nav_order: 8
+---
+
 # HubSpot Sync Milli - Release & Update System
 
 This plugin includes an automatic update system that checks for new releases on GitHub and allows users to update directly from their WordPress admin.

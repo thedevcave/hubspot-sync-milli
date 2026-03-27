@@ -1,3 +1,9 @@
+---
+layout: page
+title: ShipHero Integration
+nav_order: 9
+---
+
 # ShipHero Integration Hook Implementation
 
 ## What Was Added

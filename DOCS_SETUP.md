@@ -3,40 +3,49 @@
 ## 🎉 Clean Organization
 - **Main plugin folder**: Now clean with just essential files
 - **All documentation**: Organized in `docs/` folder  
-- **GitHub Pages**: Automatically published online
+- **GitHub Pages**: Set up for branch deployment from `/docs` folder
 
 ## 🌐 Live Documentation Site
 
-Your documentation is now available at:
+Your documentation will be available at:
 **https://thedevcave.github.io/hubspot-sync-milli/**
 
-### 📖 What's Available:
-- **Complete Plugin Overview**: Main features and setup
-- **Abandoned Cart Guide**: Detailed implementation instructions
-- **Serial Numbers & Devices**: Integration with fulfillment systems
-- **Developer Reference**: Hooks, filters, and customization
-- **Configuration Guides**: Step-by-step setup instructions
-- **Troubleshooting**: Common issues and solutions
+## ✅ Current GitHub Pages Settings
+- **Source**: Deploy from a branch
+- **Branch**: main
+- **Folder**: /docs
 
-## 🔧 How to Update Documentation
+This configuration is correct and should work!
 
-1. **Edit files in `docs/` folder**
-2. **Commit and push to GitHub**
-3. **GitHub automatically updates the website**
-4. **Changes appear at the live URL within 2-3 minutes**
+## 🔧 If Still Getting 404 Error:
+
+1. **Wait a few minutes** - GitHub Pages can take 5-10 minutes to build and deploy
+
+2. **Check build status**:
+   - Go to your GitHub repo → Actions tab
+   - Look for "pages build and deployment" workflow
+   - If it's failing, check the error messages
+
+3. **Verify repository settings**:
+   - Repository must be public for GitHub Pages to work with free accounts
+   - Go to Settings → Pages and confirm source is set to "Deploy from a branch"
+   - Branch should be "main" and folder should be "/docs"
+
+4. **Force rebuild**:
+   - Make a small change to any file in `docs/` folder
+   - Commit and push to trigger a new build
 
 ## 📱 Sharing with Clients
 
-**Send them this link:** https://thedevcave.github.io/hubspot-sync-milli/
+Once working, send them: **https://thedevcave.github.io/hubspot-sync-milli/**
 
-The site includes:
-- ✅ Professional, clean design
+The site will include:
+- ✅ Professional, clean design with GitHub's Minima theme
+- ✅ Organized navigation between documentation sections
 - ✅ Mobile-friendly responsive layout  
-- ✅ Search functionality
-- ✅ Organized navigation
-- ✅ Always up-to-date content
-- ✅ No need for client to download or install anything
+- ✅ Complete plugin documentation
+- ✅ Easy-to-find guides and references
 
 ---
 
-*The documentation site updates automatically whenever you push changes to GitHub!*
+*The documentation site updates automatically when you push changes to the `docs/` folder!*

@@ -1,3 +1,9 @@
+---
+layout: page
+title: HubSpot Setup Guide
+nav_order: 6
+---
+
 # HubSpot Custom Properties Setup
 
 To ensure the abandoned cart sync functionality works correctly, you need to configure the following custom properties in your HubSpot account:
