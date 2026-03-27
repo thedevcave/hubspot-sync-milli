@@ -24,12 +24,8 @@ debug-*.php export-ignore
 test-*.php export-ignore
 
 # Exclude documentation that's not needed for plugin installation
-HOOKS_AND_TRIGGERS.md export-ignore
-SERIAL_NUMBERS.md export-ignore
-SHIPHERO-INTEGRATION-HOOK.md export-ignore
-HUBSPOT-SETUP.md export-ignore
-CHECKOUT_FIELDS.md export-ignore
-UPDATES.md export-ignore
+docs/ export-ignore
+_config.yml export-ignore
 
 CHECKOUT_FIELDS.md export-ignore
 
