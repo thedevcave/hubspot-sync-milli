@@ -48,11 +48,10 @@ class HubSpot_Sync_Milli_Checkout_Fields_Simple {
      */
     public function render_fields( $checkout ) {
         echo '<div id="hubspot-simple-checkout-fields">';
-        echo '<h3 style="margin-top: 30px;padding: 0;font-size: 26px;color: #85334e;">' . esc_html__( 'How did you hear about us?', 'hubspot-sync-milli' ) . '</h3>';
+        echo '<h3 style="margin-top: 30px;padding: 0;font-size: 26px;color: #85334e;">' . esc_html__( 'Were you referred by a healthcare provider?', 'hubspot-sync-milli' ) . '</h3>';
         
         // Single healthcare provider referral question
         echo '<p class="form-row form-row-wide hubspot-simple-radio-field" id="provider_referred_field">';
-        echo '<label class="main-field-label">' . esc_html__( 'Were you referred by a healthcare provider?', 'hubspot-sync-milli' ) . ' <abbr class="required" title="required">*</abbr></label>';
         
         echo '<span class="woocommerce-input-wrapper">';
         $current_value = $checkout->get_value( 'provider_referred' );
