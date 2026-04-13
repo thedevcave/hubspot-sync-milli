@@ -68,9 +68,11 @@ class HubSpot_Sync_Milli {
         add_action( 'woocommerce_checkout_order_processed', array( $this, 'on_order_processed' ), 20, 3 );
         add_action( 'woocommerce_order_status_changed', array( $this, 'on_order_status_changed' ), 10, 4 );
         
-        // Custom checkout fields
-        add_action( 'woocommerce_after_order_notes', array( $this, 'add_checkout_fields' ) );
-        add_action( 'woocommerce_checkout_update_order_meta', array( $this, 'save_checkout_fields' ) );
+        // Custom checkout fields (only if enabled)
+        if ( ! empty( $this->settings['enable_checkout_fields'] ) ) {
+            add_action( 'woocommerce_after_order_notes', array( $this, 'add_checkout_fields' ) );
+            add_action( 'woocommerce_checkout_update_order_meta', array( $this, 'save_checkout_fields' ) );
+        }
         
         // Async processing
         add_action( 'hubspot_sync_milli_cron', array( $this, 'process_sync' ) );
@@ -323,6 +325,13 @@ class HubSpot_Sync_Milli {
             $sanitized['sync_contact_fields'] = ! empty( $input['sync_contact_fields'] );
         } elseif ( isset( $input['sync_contact_fields'] ) ) {
             $sanitized['sync_contact_fields'] = ! empty( $input['sync_contact_fields'] );
+        }
+        
+        // Handle checkout fields checkbox for contact-sync tab
+        if ( $active_tab === 'contact-sync' ) {
+            $sanitized['enable_checkout_fields'] = ! empty( $input['enable_checkout_fields'] );
+        } elseif ( isset( $input['enable_checkout_fields'] ) ) {
+            $sanitized['enable_checkout_fields'] = ! empty( $input['enable_checkout_fields'] );
         }
         
         // Handle deal sync checkbox for deal-sync tab  

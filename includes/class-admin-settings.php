@@ -192,6 +192,19 @@ class HubSpot_Sync_Milli_Admin_Settings {
                     </label>
                 </td>
             </tr>
+            <tr>
+                <th scope="row"><?php esc_html_e( 'Enable Checkout Fields', 'hubspot-sync-milli' ); ?></th>
+                <td>
+                    <label>
+                        <input type="checkbox" 
+                               name="hubspot_sync_milli_settings[enable_checkout_fields]" 
+                               value="1" 
+                               <?php checked( $this->settings['enable_checkout_fields'] ?? true ); ?> />
+                        <?php esc_html_e( 'Display additional checkout fields on the checkout page', 'hubspot-sync-milli' ); ?>
+                    </label>
+                    <p class="description"><?php esc_html_e( 'Uncheck this to hide the checkout fields while still maintaining contact sync functionality.', 'hubspot-sync-milli' ); ?></p>
+                </td>
+            </tr>
         </table>
         
         <h3><?php esc_html_e( 'Field Mapping', 'hubspot-sync-milli' ); ?></h3>

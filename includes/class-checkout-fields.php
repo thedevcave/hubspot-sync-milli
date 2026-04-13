@@ -29,7 +29,8 @@ class HubSpot_Sync_Milli_Checkout_Fields {
      * Render checkout fields
      */
     public function render_fields( $checkout ) {
-        if ( ! $this->settings['sync_contact_fields'] ?? true ) {
+        // Check if contact sync and checkout fields are both enabled
+        if ( ! ( $this->settings['sync_contact_fields'] ?? true ) || ! ( $this->settings['enable_checkout_fields'] ?? true ) ) {
             return;
         }
         
@@ -169,7 +170,8 @@ class HubSpot_Sync_Milli_Checkout_Fields {
      * Save checkout fields
      */
     public function save_fields( $order_id ) {
-        if ( ! $this->settings['sync_contact_fields'] ?? true ) {
+        // Check if contact sync and checkout fields are both enabled
+        if ( ! ( $this->settings['sync_contact_fields'] ?? true ) || ! ( $this->settings['enable_checkout_fields'] ?? true ) ) {
             return;
         }
         
