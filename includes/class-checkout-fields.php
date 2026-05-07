@@ -177,12 +177,19 @@ class HubSpot_Sync_Milli_Checkout_Fields {
         
         $field_mapping = $this->settings['contact_field_mapping'] ?? array();
         
+        $order = wc_get_order( $order_id );
+        if ( ! $order ) {
+            return;
+        }
+
         foreach ( $field_mapping as $field_key => $hubspot_property ) {
             if ( ! empty( $_POST[ $field_key ] ) ) {
                 $value = sanitize_text_field( $_POST[ $field_key ] );
-                update_post_meta( $order_id, "_$field_key", $value );
+                $order->update_meta_data( "_$field_key", $value );
             }
         }
+
+        $order->save();
     }
     
     /**
@@ -197,8 +204,13 @@ class HubSpot_Sync_Milli_Checkout_Fields {
         $values = array();
         $us_states = WC()->countries->get_states( 'US' );
         
+        $order = wc_get_order( $order_id );
+        if ( ! $order ) {
+            return array();
+        }
+
         foreach ( $field_mapping as $field_key => $hubspot_property ) {
-            $value = get_post_meta( $order_id, "_$field_key", true );
+            $value = $order->get_meta( "_$field_key", true );
             
             if ( ! empty( $value ) ) {
                 // Transform state codes to full names

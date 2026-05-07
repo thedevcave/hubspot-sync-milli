@@ -82,8 +82,12 @@ class HubSpot_Sync_Milli {
         add_action( 'hubspot_sync_milli_process_serial_number', array( $this, 'process_single_serial_number' ), 10, 2 );
         add_action( 'woocommerce_order_item_add_action', array( $this, 'on_order_item_added' ), 10, 3 );
         
-        // Monitor ShipHero serial number updates
-        add_action( 'updated_post_meta', array( $this, 'on_order_meta_updated' ), 10, 4 );
+        // Monitor ShipHero serial number updates with storage-specific hooks.
+        if ( $this->is_hpos_enabled() ) {
+            add_action( 'woocommerce_after_order_object_save', array( $this, 'on_order_object_saved' ), 10, 2 );
+        } else {
+            add_action( 'updated_post_meta', array( $this, 'on_order_meta_updated_legacy' ), 10, 4 );
+        }
         
         // Admin order actions
         add_filter( 'woocommerce_order_actions', array( $this, 'add_order_actions' ) );
@@ -733,52 +737,94 @@ class HubSpot_Sync_Milli {
     }
     
     /**
-     * Monitor order meta updates to detect ShipHero serial number additions
-     * 
-     * @param int $meta_id The meta ID
-     * @param int $post_id The post ID (order ID)
-     * @param string $meta_key The meta key
-     * @param mixed $meta_value The meta value
+     * Monitor order saves to detect ShipHero serial number updates.
+     *
+     * @param WC_Order $order WooCommerce order object.
+     * @param mixed $data_store WooCommerce order data store.
      */
-    public function on_order_meta_updated( $meta_id, $post_id, $meta_key, $meta_value ) {
-        // Only process serial_numbers meta for shop_order posts
-        if ( $meta_key !== 'serial_numbers' || get_post_type( $post_id ) !== 'shop_order' ) {
+    public function on_order_object_saved( $order, $data_store ) {
+        if ( ! $order || ! is_a( $order, 'WC_Order' ) ) {
             return;
         }
-        
-        // Validate order exists
-        $order = wc_get_order( $post_id );
-        if ( ! $order ) {
+
+        $meta_value = $order->get_meta( 'serial_numbers', true );
+        if ( empty( $meta_value ) ) {
             return;
         }
-        
+
+        $this->process_order_serial_numbers_meta( $order, $meta_value );
+    }
+
+    /**
+     * Monitor legacy post meta updates to detect ShipHero serial number updates.
+     *
+     * @param int $meta_id Meta ID.
+     * @param int $object_id Object (order) ID.
+     * @param string $meta_key Updated meta key.
+     * @param mixed $meta_value Updated meta value.
+     */
+    public function on_order_meta_updated_legacy( $meta_id, $object_id, $meta_key, $meta_value ) {
+        if ( 'serial_numbers' !== $meta_key ) {
+            return;
+        }
+
+        $order = wc_get_order( $object_id );
+        if ( ! $order || ! is_a( $order, 'WC_Order' ) ) {
+            return;
+        }
+
+        $this->process_order_serial_numbers_meta( $order, (string) $meta_value );
+    }
+
+    /**
+     * Check whether WooCommerce HPOS custom order tables are enabled.
+     *
+     * @return bool
+     */
+    private function is_hpos_enabled() {
+        if ( class_exists( '\\Automattic\\WooCommerce\\Utilities\\OrderUtil' ) && method_exists( '\\Automattic\\WooCommerce\\Utilities\\OrderUtil', 'custom_orders_table_usage_is_enabled' ) ) {
+            return \Automattic\WooCommerce\Utilities\OrderUtil::custom_orders_table_usage_is_enabled();
+        }
+
+        return false;
+    }
+
+    /**
+     * Process serial number meta values and trigger device sync.
+     *
+     * @param WC_Order $order WooCommerce order object.
+     * @param string $meta_value Serial numbers meta value.
+     */
+    private function process_order_serial_numbers_meta( $order, $meta_value ) {
+        $order_id = $order->get_id();
+
         // Skip if HubSpot sync is disabled
         if ( ! $this->should_sync() ) {
-            $this->log_debug( "ShipHero serial number detected for order {$post_id} but HubSpot sync is disabled" );
+            $this->log_debug( "ShipHero serial number detected for order {$order_id} but HubSpot sync is disabled" );
             return;
         }
-        
-        $this->log_debug( "ShipHero serial number update detected for order {$post_id}: {$meta_value}" );
-        
+
+        $this->log_debug( "ShipHero serial number update detected for order {$order_id}: {$meta_value}" );
+
         // Parse serial numbers (could be comma-separated)
         $serial_numbers = array_filter( array_map( 'trim', explode( ',', $meta_value ) ) );
-        
+
         foreach ( $serial_numbers as $serial_number ) {
             if ( empty( $serial_number ) || $serial_number === 'N/A' ) {
                 continue;
             }
-            
+
             // Check if this serial number was already processed
-            $existing_devices = get_post_meta( $post_id, '_hubspot_device_ids', true );
-            if ( is_array( $existing_devices ) && in_array( $serial_number, array_keys( $existing_devices ) ) ) {
-                $this->log_debug( "Serial number {$serial_number} already processed for order {$post_id}" );
+            $existing_devices = $order->get_meta( '_hubspot_device_ids', true );
+            if ( is_array( $existing_devices ) && in_array( $serial_number, array_keys( $existing_devices ), true ) ) {
+                $this->log_debug( "Serial number {$serial_number} already processed for order {$order_id}" );
                 continue;
             }
-            
-            $this->log_debug( "Triggering HubSpot device creation for serial: {$serial_number} from order {$post_id}" );
-            
+
+            $this->log_debug( "Triggering HubSpot device creation for serial: {$serial_number} from order {$order_id}" );
+
             // Trigger the existing device creation system
-            do_action( 'hubspot_sync_milli_process_serial_number', $post_id, $serial_number );
+            do_action( 'hubspot_sync_milli_process_serial_number', $order_id, $serial_number );
         }
     }
     

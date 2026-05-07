@@ -77,6 +77,15 @@ function hubspot_sync_milli_init() {
 }
 
 /**
+ * Declare compatibility with WooCommerce HPOS (custom order tables).
+ */
+function hubspot_sync_milli_declare_hpos_compatibility() {
+    if ( class_exists( '\\Automattic\\WooCommerce\\Utilities\\FeaturesUtil' ) ) {
+        \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility( 'custom_order_tables', __FILE__, true );
+    }
+}
+
+/**
  * Plugin activation
  */
 function hubspot_sync_milli_activate() {
@@ -150,6 +159,7 @@ function hubspot_sync_milli_uninstall() {
 }
 
 // Hook into WordPress
+add_action( 'before_woocommerce_init', 'hubspot_sync_milli_declare_hpos_compatibility' );
 add_action( 'plugins_loaded', 'hubspot_sync_milli_init' );
 
 // Activation and deactivation hooks

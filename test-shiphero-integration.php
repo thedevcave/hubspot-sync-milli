@@ -65,7 +65,7 @@ if ( $test_order_id && $test_serial && isset( $_GET['test'] ) ) {
     echo '<p>Current serial numbers in order meta: <strong>' . esc_html( $current_serials ) . '</strong></p>';
     
     // Show any existing device IDs
-    $device_ids = get_post_meta( $test_order_id, '_hubspot_device_ids', true );
+    $device_ids = $order->get_meta( '_hubspot_device_ids', true );
     if ( $device_ids && is_array( $device_ids ) ) {
         echo '<p>Existing HubSpot device IDs:</p>';
         echo '<ul>';

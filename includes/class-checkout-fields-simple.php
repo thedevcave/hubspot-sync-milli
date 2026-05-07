@@ -261,6 +261,10 @@ class HubSpot_Sync_Milli_Checkout_Fields_Simple {
         }
         
         $field_mapping = $this->settings['contact_field_mapping'] ?? array();
+        $order = wc_get_order( $order_id );
+        if ( ! $order ) {
+            return;
+        }
         
         // Only save the provider_referred field if it has a valid value
         if ( isset( $_POST['provider_referred'] ) && isset( $field_mapping['provider_referred'] ) ) {
@@ -268,7 +272,8 @@ class HubSpot_Sync_Milli_Checkout_Fields_Simple {
             
             // Validate the value is one of our expected options
             if ( in_array( $value, array( 'Yes', 'No' ), true ) ) {
-                update_post_meta( $order_id, '_provider_referred', $value );
+                $order->update_meta_data( '_provider_referred', $value );
+                $order->save();
                 
                 // Log for debugging (optional - can be removed in production)
                 error_log( "HubSpot Sync Milli: Saved provider_referred field with value: {$value} for order {$order_id}" );
@@ -288,10 +293,14 @@ class HubSpot_Sync_Milli_Checkout_Fields_Simple {
         
         $field_mapping = $this->settings['contact_field_mapping'] ?? array();
         $values = array();
+        $order = wc_get_order( $order_id );
+        if ( ! $order ) {
+            return array();
+        }
         
         // Only get the provider_referred field
         if ( isset( $field_mapping['provider_referred'] ) ) {
-            $value = get_post_meta( $order_id, '_provider_referred', true );
+            $value = $order->get_meta( '_provider_referred', true );
             
             if ( ! empty( $value ) ) {
                 // Transform Yes/No to boolean strings for HubSpot

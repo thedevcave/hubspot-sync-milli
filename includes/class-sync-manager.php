@@ -687,13 +687,8 @@ class HubSpot_Sync_Milli_Sync_Manager {
      * Update serial number for a specific order
      */
     public function update_serial_number( $order_id, $serial_number ) {
-        if ( get_post_type( $order_id ) !== 'shop_order' ) {
-            $this->log_error( "Invalid order ID: {$order_id}" );
-            return false;
-        }
-        
         $order = wc_get_order( $order_id );
-        if ( ! $order ) {
+        if ( ! $order || ! is_a( $order, 'WC_Order' ) ) {
             $this->log_error( "Order not found: {$order_id}" );
             return false;
         }
