@@ -50,6 +50,13 @@ class HubSpot_Sync_Milli_Abandoned_Cart_Tracker {
         if ( ! is_checkout() ) {
             return;
         }
+
+        // Enabled by default; can be disabled if needed:
+        // add_filter( 'hubspot_sync_milli_enable_abandoned_cart_tracking', '__return_false' );
+        $tracking_enabled = (bool) apply_filters( 'hubspot_sync_milli_enable_abandoned_cart_tracking', true );
+        if ( ! $tracking_enabled ) {
+            return;
+        }
         
         wp_enqueue_script(
             'hubspot-abandoned-cart-tracker',

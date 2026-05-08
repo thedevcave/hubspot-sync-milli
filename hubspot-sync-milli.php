@@ -3,7 +3,7 @@
  * Plugin Name: HubSpot Sync - Milli
  * Plugin URI: https://teamoutsiders.com
  * Description: Consolidated HubSpot integration for WooCommerce. Syncs orders, contacts, deals, and custom checkout fields to HubSpot CRM.
- * Version: 1.0.4
+ * Version: 1.0.5
  * Author: Team Outsiders
  * Author URI: https://teamoutsiders.com
  * License: GPL-3.0+
@@ -28,7 +28,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 define( 'HUBSPOT_SYNC_MILLI_USE_SIMPLE_CHECKOUT', true );
 
 // Plugin version
-define( 'HUBSPOT_SYNC_MILLI_VERSION', '1.0.4' );
+define( 'HUBSPOT_SYNC_MILLI_VERSION', '1.0.5' );
 
 // Plugin paths
 define( 'HUBSPOT_SYNC_MILLI_PLUGIN_FILE', __FILE__ );

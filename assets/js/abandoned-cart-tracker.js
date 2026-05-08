@@ -5,7 +5,13 @@
 
 (function($) {
     'use strict';
-    
+
+    // Prevent duplicate tracker instances if the script is loaded more than once.
+    if (window.__hubspotMilliCartTrackerLoaded) {
+        return;
+    }
+    window.__hubspotMilliCartTrackerLoaded = true;
+
     // Checkout fields to monitor (same as original plugin)
     var monitoredFields = [
         'billing_email',
@@ -32,12 +38,20 @@
     ];
     
     var abandonedCartTracker = {
+        bound: false,
+        lastPayloadSignature: null,
+        lastTrackedAt: 0,
+        minTrackIntervalMs: 15000,
+        inFlight: false,
         
         /**
          * Initialize tracking
          */
         init: function() {
-            this.bindFieldChanges();
+            if (!this.bound) {
+                this.bindFieldChanges();
+                this.bound = true;
+            }
             console.log('HubSpot abandoned cart tracking initialized');
         },
         
@@ -46,32 +60,33 @@
          */
         bindFieldChanges: function() {
             var self = this;
+            var fieldSelector = monitoredFields.map(function(fieldId) {
+                return '#' + fieldId;
+            }).join(', ');
             
-            // Monitor each field for changes
-            monitoredFields.forEach(function(fieldId) {
-                $('#' + fieldId).on('change blur', function() {
-                    // Debounce to avoid too many requests
+            $(document.body)
+                .off('input.hubspotTracker change.hubspotTracker', fieldSelector)
+                .on('input.hubspotTracker change.hubspotTracker', fieldSelector, function(event) {
+                    // Ignore programmatic events fired by other scripts.
+                    if (event && event.isTrigger) {
+                        return;
+                    }
                     clearTimeout(self.trackingTimeout);
                     self.trackingTimeout = setTimeout(function() {
                         self.trackCheckoutData();
-                    }, 1000);
+                    }, 1200);
                 });
-            });
-            
-            // Monitor shipping checkbox
-            $('#ship-to-different-address-checkbox').on('change', function() {
+
+            $(document.body)
+                .off('change.hubspotTracker', '#ship-to-different-address-checkbox')
+                .on('change.hubspotTracker', '#ship-to-different-address-checkbox', function(event) {
+                if (event && event.isTrigger) {
+                    return;
+                }
                 clearTimeout(self.trackingTimeout);
                 self.trackingTimeout = setTimeout(function() {
                     self.trackCheckoutData();
-                }, 1000);
-            });
-            
-            // Monitor on checkout update
-            $(document.body).on('updated_checkout', function() {
-                clearTimeout(self.trackingTimeout);
-                self.trackingTimeout = setTimeout(function() {
-                    self.trackCheckoutData();
-                }, 2000);
+                }, 1200);
             });
         },
         
@@ -79,6 +94,14 @@
          * Collect and send checkout data to backend
          */
         trackCheckoutData: function() {
+            if (this.inFlight) {
+                return;
+            }
+
+            if ((Date.now() - this.lastTrackedAt) < this.minTrackIntervalMs) {
+                return;
+            }
+
             var email = $('#billing_email').val();
             
             // Only track if we have a valid email
@@ -102,6 +125,15 @@
             
             // Add shipping checkbox state
             data['ship_to_different_address'] = $('#ship-to-different-address-checkbox').is(':checked') ? 'yes' : 'no';
+
+            // Skip duplicate payloads to avoid repeat AJAX calls during checkout refreshes.
+            var payloadSignature = JSON.stringify(data);
+            if (payloadSignature === this.lastPayloadSignature) {
+                return;
+            }
+            this.lastPayloadSignature = payloadSignature;
+            this.lastTrackedAt = Date.now();
+            this.inFlight = true;
             
             console.log('HubSpot tracking checkout data for:', email);
             
@@ -121,15 +153,15 @@
                             if (result.cart_hash && window.sessionStorage) {
                                 sessionStorage.setItem('hubspot_cart_hash', result.cart_hash);
                             }
-                            
-                            // Trigger checkout update to refresh totals
-                            $(document.body).trigger('update_checkout');
                         } else {
                             console.warn('HubSpot tracking failed:', result.message);
                         }
                     } catch (e) {
                         console.error('HubSpot tracking response parsing error:', e);
                     }
+                },
+                complete: function() {
+                    abandonedCartTracker.inFlight = false;
                 },
                 error: function(xhr, status, error) {
                     console.error('HubSpot tracking AJAX error:', status, error);
@@ -158,18 +190,6 @@
         // Only run on checkout page
         if ($('body').hasClass('woocommerce-checkout')) {
             abandonedCartTracker.init();
-        }
-    });
-    
-    /**
-     * Re-initialize after checkout updates (for dynamic content)
-     */
-    $(document.body).on('updated_checkout', function() {
-        if ($('body').hasClass('woocommerce-checkout')) {
-            // Small delay to ensure DOM is updated
-            setTimeout(function() {
-                abandonedCartTracker.bindFieldChanges();
-            }, 500);
         }
     });
     

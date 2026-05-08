@@ -38,10 +38,9 @@ class HubSpot_Sync_Milli_Checkout_Fields_Simple {
         if ( ! ( $this->settings['sync_contact_fields'] ?? true ) || ! ( $this->settings['enable_checkout_fields'] ?? true ) ) {
             return;
         }
-        
-        add_action( 'woocommerce_checkout_billing', array( $this, 'render_fields' ), 20 );
+
+        // Rendering and saving are handled by the main plugin class to avoid duplicate field output.
         add_action( 'woocommerce_checkout_process', array( $this, 'validate_fields' ) );
-        add_action( 'woocommerce_checkout_update_order_meta', array( $this, 'save_fields' ) );
     }
     
     /**
